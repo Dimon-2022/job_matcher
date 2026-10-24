@@ -1,0 +1,12 @@
+<h1>Job openings for your resume</h1>
+
+<a href="{% url 'upload_resume' %}">Upload the next resume</a>
+
+{% for job in jobs %}
+    <div>
+        <h3>{{ job.title }} — {{ job.score }}%</h3>
+        <p>{{ job.company }}{% if job.location %}, {{ job.location }}{% endif %}</p>
+    </div>
+{% empty %}
+    <p>There are no vacancies yet...</p>
+{% endfor %}

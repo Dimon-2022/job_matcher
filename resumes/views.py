@@ -11,7 +11,7 @@ def upload_resume(request):
             resume = form.save(commit=False)
             resume.text = extract_text_from_pdf(resume.file)
             resume.save()
-            return redirect("upload_resume")
+            return redirect("match_results", resume_id=resume.pk)
     else:
         form = ResumeForm()
 

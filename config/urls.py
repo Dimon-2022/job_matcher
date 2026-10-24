@@ -6,6 +6,7 @@ from django.urls import path, include
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('resumes.urls')),
+    path('', include("matching.urls")),
 ]
 
 if settings.DEBUG:
