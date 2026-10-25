@@ -1,12 +1,22 @@
-<h1>Job openings for your resume</h1>
-
-<a href="{% url 'upload_resume' %}">Upload the next resume</a>
-
-{% for job in jobs %}
-    <div>
-        <h3>{{ job.title }} — {{ job.score }}%</h3>
-        <p>{{ job.company }}{% if job.location %}, {{ job.location }}{% endif %}</p>
-    </div>
+{% for job in page_obj %}
+    <h3>{{ job.title }} — {{ job.score }}%</h3>
+    <p>{{ job.company }}, {{ job.location }}</p>
 {% empty %}
-    <p>There are no vacancies yet...</p>
+    <p>No vacancies with a match of 60% or higher.</p>
 {% endfor %}
+
+{% if page_obj.paginator.num_pages > 1 %}
+    <div>
+        {% if page_obj.has_previous %}
+            <a href="?page={{ page_obj.previous_page_number }}">← Back</a>
+        {% endif %}
+
+        Page {{ page_obj.number }} from {{ page_obj.paginator.num_pages }}
+
+        {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}">Next →</a>
+        {% endif %}
+    </div>
+{% endif %}
+
+<a href="{% url 'upload_resume' %}">Upload another resume</a>
