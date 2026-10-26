@@ -1,17 +1,35 @@
+<h1>Matching jobs for your resume</h1>
+
 {% for job in page_obj %}
     <h3>{{ job.title }} — {{ job.score }}%</h3>
     <p>{{ job.company }}, {{ job.location }}</p>
+
+    {% if job.matched_skills %}
+        <p>✅ Matched skills:
+            {% for skill in job.matched_skills %}
+                {{ skill }}{% if not forloop.last %}, {% endif %}
+            {% endfor %}
+        </p>
+    {% endif %}
+
+    {% if job.missing_skills %}
+        <p>❌ Missing skills:
+            {% for skill in job.missing_skills %}
+                {{ skill }}{% if not forloop.last %}, {% endif %}
+            {% endfor %}
+        </p>
+    {% endif %}
 {% empty %}
-    <p>No vacancies with a match of 60% or higher.</p>
+    <p>No jobs with a match of 60% or higher.</p>
 {% endfor %}
 
 {% if page_obj.paginator.num_pages > 1 %}
     <div>
         {% if page_obj.has_previous %}
-            <a href="?page={{ page_obj.previous_page_number }}">← Back</a>
+            <a href="?page={{ page_obj.previous_page_number }}">← Previous</a>
         {% endif %}
 
-        Page {{ page_obj.number }} from {{ page_obj.paginator.num_pages }}
+        Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
 
         {% if page_obj.has_next %}
             <a href="?page={{ page_obj.next_page_number }}">Next →</a>
