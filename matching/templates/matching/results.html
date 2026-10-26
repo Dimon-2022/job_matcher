@@ -1,40 +1,66 @@
-<h1>Matching jobs for your resume</h1>
+{% extends "base.html" %}
+
+{% block title %}Matching jobs{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3 mb-0">Matching jobs for your resume</h1>
+    <a href="{% url 'upload_resume' %}" class="btn btn-outline-primary">Upload another resume</a>
+</div>
 
 {% for job in page_obj %}
-    <h3>{{ job.title }} — {{ job.score }}%</h3>
-    <p>{{ job.company }}, {{ job.location }}</p>
+    <div class="card mb-3 shadow-sm">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <h2 class="h5 mb-1">{{ job.title }}</h2>
+                    <p class="text-muted mb-2">{{ job.company }} · {{ job.location }}</p>
+                </div>
+                <span class="badge bg-success fs-6">{{ job.score }}%</span>
+            </div>
 
-    {% if job.matched_skills %}
-        <p>✅ Matched skills:
-            {% for skill in job.matched_skills %}
-                {{ skill }}{% if not forloop.last %}, {% endif %}
-            {% endfor %}
-        </p>
-    {% endif %}
+            {% if job.matched_skills %}
+                <p class="mb-1">
+                    <strong>Matched skills:</strong>
+                    {% for skill in job.matched_skills %}
+                        <span class="badge text-bg-success">{{ skill }}</span>
+                    {% endfor %}
+                </p>
+            {% endif %}
 
-    {% if job.missing_skills %}
-        <p>❌ Missing skills:
-            {% for skill in job.missing_skills %}
-                {{ skill }}{% if not forloop.last %}, {% endif %}
-            {% endfor %}
-        </p>
-    {% endif %}
+            {% if job.missing_skills %}
+                <p class="mb-0">
+                    <strong>Missing skills:</strong>
+                    {% for skill in job.missing_skills %}
+                        <span class="badge text-bg-secondary">{{ skill }}</span>
+                    {% endfor %}
+                </p>
+            {% endif %}
+        </div>
+    </div>
 {% empty %}
-    <p>No jobs with a match of 60% or higher.</p>
+    <div class="alert alert-info">No jobs with a match of 60% or higher.</div>
 {% endfor %}
 
 {% if page_obj.paginator.num_pages > 1 %}
-    <div>
-        {% if page_obj.has_previous %}
-            <a href="?page={{ page_obj.previous_page_number }}">← Previous</a>
-        {% endif %}
+    <nav>
+        <ul class="pagination justify-content-center">
+            {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}">← Previous</a>
+                </li>
+            {% endif %}
 
-        Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+            <li class="page-item disabled">
+                <span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+            </li>
 
-        {% if page_obj.has_next %}
-            <a href="?page={{ page_obj.next_page_number }}">Next →</a>
-        {% endif %}
-    </div>
+            {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.next_page_number }}">Next →</a>
+                </li>
+            {% endif %}
+        </ul>
+    </nav>
 {% endif %}
-
-<a href="{% url 'upload_resume' %}">Upload another resume</a>
+{% endblock %}

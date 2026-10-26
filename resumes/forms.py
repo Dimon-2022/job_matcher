@@ -1,7 +1,11 @@
-from django.forms import ModelForm
-from resumes.models import Resume
+from django import forms
+from .models import Resume
 
-class ResumeForm(ModelForm):
+
+class ResumeForm(forms.ModelForm):
     class Meta:
         model = Resume
-        fields = ['file']
+        fields = ["file"]
+        widgets = {
+            "file": forms.FileInput(attrs={"class": "form-control", "accept": ".pdf"}),
+        }
