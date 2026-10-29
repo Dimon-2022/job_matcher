@@ -4,6 +4,7 @@
 
 {% block content %}
 <h1 class="h3 mb-4">All jobs</h1>
+<h2 class="h5 mb-1"><a href="{% url 'job_detail' job.pk %}">{{ job.title }}</a></h2>
 
 {% for job in page_obj %}
     <div class="card mb-3 shadow-sm">
