@@ -8,6 +8,7 @@ urlpatterns = [
     path('', include('resumes.urls')),
     path('', include("matching.urls")),
     path('', include("jobs.urls")),
+    path("accounts/", include("django.contrib.auth.urls")),
 ]
 
 if settings.DEBUG:
