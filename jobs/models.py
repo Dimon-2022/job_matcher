@@ -1,6 +1,7 @@
 from django.db import models
 from pgvector.django import VectorField
 from matching.services import get_embedding, extract_skills
+from django.conf import settings
 
 from matching.services import get_embedding
 
@@ -18,6 +19,7 @@ class Job(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     embedding = VectorField(dimensions=384, null=True, blank=True)
     skills = models.ManyToManyField(Skill, blank=True)
+    owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=True, blank=True, related_name="jobs")
 
     def save(self, *args, **kwargs):
         text = f"{self.title} {self.description}"
