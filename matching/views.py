@@ -1,15 +1,17 @@
+from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.shortcuts import render, get_object_or_404
 from pgvector.django import CosineDistance
+from django.contrib.auth.decorators import login_required
 
 from jobs.models import Job
 from resumes.models import Resume
 
 THRESHOLD = 60
 
-
+@login_required
 def match_results(request, resume_id):
-    resume = get_object_or_404(Resume, pk=resume_id)
+    resume = get_object_or_404(Resume, pk=resume_id, owner=request.user)
     resume_skills = set(resume.skills.all())
 
     jobs = Job.objects.annotate(

@@ -14,7 +14,8 @@
             <a class="btn btn-outline-light btn-sm me-2" href="{% url 'job_list' %}">Jobs</a>
             {% if user.is_authenticated %}
                 {% if user.profile.role == "seeker" %}
-                    <a class="btn btn-light btn-sm me-2" href="{% url 'upload_resume' %}">Upload resume</a>
+                    <a class="btn btn-light btn-sm me-2" href="{% url 'my_resumes' %}">My resumes</a>
+                    <a class="btn btn-outline-light btn-sm me-2" href="{% url 'upload_resume' %}">Upload resume</a>
                 {% elif user.profile.role == "employer" %}
                     <a class="btn btn-light btn-sm me-2" href="{% url 'my_jobs' %}">My jobs</a>
                     <a class="btn btn-outline-light btn-sm me-2" href="{% url 'job_create' %}">Post a job</a>

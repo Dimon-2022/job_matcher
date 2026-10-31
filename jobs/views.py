@@ -1,11 +1,8 @@
-from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.urls import reverse_lazy
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
-
+from accounts.mixins import EmployerRequiredMixin
 from .forms import JobForm
 from .models import Job
-
-
 
 class JobListView(ListView):
     model = Job
@@ -16,11 +13,6 @@ class JobListView(ListView):
 class JobDetailView(DetailView):
     model = Job
     template_name = "jobs/job_detail.html"
-
-class EmployerRequiredMixin(LoginRequiredMixin, UserPassesTestMixin):
-    def test_func(self):
-        user = self.request.user
-        return hasattr(user, "profile") and user.profile.role == "employer"
 
 class JobCreateView(EmployerRequiredMixin, CreateView):
     model = Job
