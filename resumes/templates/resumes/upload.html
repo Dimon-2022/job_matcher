@@ -1,5 +1,7 @@
 {% extends "base.html" %}
 
+{% load crispy_forms_tags %}
+
 {% block title %}Upload resume{% endblock %}
 
 {% block content %}
@@ -12,12 +14,7 @@
 
                 <form method="POST" enctype="multipart/form-data">
                     {% csrf_token %}
-                    <div class="mb-3">
-                        {{ form.file }}
-                        {% for error in form.file.errors %}
-                            <div class="text-danger small mt-1">{{ error }}</div>
-                        {% endfor %}
-                    </div>
+                    {{ form|crispy }}
                     <button type="submit" class="btn btn-primary w-100">Find matching jobs</button>
                 </form>
             </div>
