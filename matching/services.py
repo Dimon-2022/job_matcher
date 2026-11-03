@@ -1,5 +1,6 @@
 import re
 from sentence_transformers import SentenceTransformer
+from pgvector.django import CosineDistance
 
 model = SentenceTransformer("paraphrase-multilingual-MiniLM-L12-v2")
 
@@ -31,3 +32,19 @@ def calculate_score(job, resume_skills):
 
     semantic = 1 - job.distance
     return round((0.6 * skill_score + 0.4 * semantic) * 100)
+
+def find_matching_jobs(resume, threshold=60):
+    from jobs.models import Job
+
+    resume_skills = set(resume.skills.all())
+    jobs = Job.objects.annotate(
+        distance=CosineDistance("embedding", resume.embedding)
+    ).prefetch_related("skills")
+
+    matched = []
+    for job in jobs:
+        job.score = calculate_score(job, resume_skills)
+        if job.score >= threshold:
+            matched.append(job)
+
+    return sorted(matched, key=lambda job: job.score, reverse=True)
