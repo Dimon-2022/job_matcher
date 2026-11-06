@@ -42,6 +42,7 @@ class JobAccessTests(TestCase):
             "title": "Data Analyst",
             "company": "InsightLab",
             "location": "Bratislava",
+            "work_mode": "onsite",
             "category": "data_analyst",
             "level": "junior",
             "job_type": "full_time",
@@ -66,3 +67,32 @@ class JobAccessTests(TestCase):
         response = self.client.post(reverse("job_delete", args=[self.job.pk]))
         self.assertEqual(response.status_code, 404)
         self.assertTrue(Job.objects.filter(pk=self.job.pk).exists())
+
+    def test_onsite_job_requires_location(self):
+        self.client.force_login(self.employer)
+        response = self.client.post(reverse("job_create"), {
+            "title": "Backend Developer",
+            "company": "CodeWave",
+            "location": "",
+            "work_mode": "onsite",
+            "category": "backend",
+            "level": "junior",
+            "job_type": "full_time",
+            "description": "Build APIs with Django.",
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("location", response.context["form"].errors)
+
+    def test_remote_job_without_location_is_ok(self):
+        self.client.force_login(self.employer)
+        response = self.client.post(reverse("job_create"), {
+            "title": "Remote Developer",
+            "company": "CodeWave",
+            "location": "",
+            "work_mode": "remote",
+            "category": "backend",
+            "level": "junior",
+            "job_type": "full_time",
+            "description": "Build APIs with Django.",
+        })
+        self.assertEqual(response.status_code, 302)

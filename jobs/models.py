@@ -61,9 +61,16 @@ class Job(models.Model):
         ("lead", "Lead"),
     ]
 
+    WORK_MODE_CHOICES = [
+        ("onsite", "On-site"),
+        ("remote", "Remote"),
+        ("hybrid", "Hybrid"),
+    ]
+
     title = models.CharField(max_length=200)
     company = models.CharField(max_length=200)
     location = models.CharField(max_length=200, blank=True)
+    work_mode = models.CharField(max_length=10, choices=WORK_MODE_CHOICES, default="onsite")
     description = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
     embedding = VectorField(dimensions=384, null=True, blank=True)

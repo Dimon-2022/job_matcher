@@ -10,7 +10,7 @@ class JobForm(forms.ModelForm):
     class Meta:
         model = Job
         fields = [
-            "title", "company", "location",
+            "title", "company", "location", "work_mode",
             "category", "level", "job_type",
             "salary_min", "salary_max",
             "url", "description",
@@ -49,5 +49,8 @@ class JobForm(forms.ModelForm):
 
         if salary_min is not None and salary_max is not None and salary_min > salary_max:
             self.add_error("salary_max", "Maximum salary must be greater than or equal to minimum.")
+
+        if cleaned_data.get("work_mode") != "remote" and not cleaned_data.get("location"):
+            self.add_error("location", "Location is required for on-site and hybrid jobs.")
 
         return cleaned_data
