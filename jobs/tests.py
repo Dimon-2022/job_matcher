@@ -42,6 +42,9 @@ class JobAccessTests(TestCase):
             "title": "Data Analyst",
             "company": "InsightLab",
             "location": "Bratislava",
+            "category": "data_analyst",
+            "level": "junior",
+            "job_type": "full_time",
             "description": "Analyze data with SQL and Excel.",
         })
         self.assertEqual(response.status_code, 302)

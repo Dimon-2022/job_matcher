@@ -8,17 +8,32 @@
         <h1 class="h3 mb-1">{{ job.title }}</h1>
         <p class="text-muted mb-3">{{ job.company }} · {{ job.location }} · Posted {{ job.created_at|date:"d M Y" }}</p>
 
+        {% if job.salary_min and job.salary_max %}
+        <p><span class="badge text-bg-success fs-6">{{ job.salary_min }} – {{ job.salary_max }} € / month</span></p>
+        {% elif job.salary_min %}
+        <p><span class="badge text-bg-success fs-6">From {{ job.salary_min }} € / month</span></p>
+        {% elif job.salary_max %}
+        <p><span class="badge text-bg-success fs-6">Up to {{ job.salary_max }} € / month</span></p>
+        {% endif %}
+
         <h2 class="h6">Required skills</h2>
         <p>
             {% for skill in job.skills.all %}
-                <span class="badge text-bg-primary">{{ skill }}</span>
+            <span class="badge text-bg-primary">{{ skill }}</span>
             {% empty %}
-                <span class="text-muted">Not specified</span>
+            <span class="text-muted">Not specified</span>
             {% endfor %}
         </p>
 
         <h2 class="h6">Description</h2>
         <div>{{ job.description|linebreaks }}</div>
+
+        {% if job.url %}
+        <a href="{{ job.url }}" target="_blank" rel="noopener noreferrer nofollow"
+           class="btn btn-primary mt-3">
+            Apply on {{ job.url_domain }} ↗
+        </a>
+        {% endif %}
 
         <a href="{% url 'job_list' %}" class="btn btn-outline-secondary mt-3">← Back to all jobs</a>
     </div>
