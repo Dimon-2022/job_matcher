@@ -4,6 +4,8 @@ from accounts.mixins import EmployerRequiredMixin
 from .forms import JobForm
 from .models import Job
 from django.db.models import F, Q
+from datetime import timedelta
+from django.utils import timezone
 
 class JobListView(ListView):
     model = Job
@@ -39,13 +41,38 @@ class JobListView(ListView):
         else:
             jobs = jobs.order_by("-created_at")
 
+        salary_from = params.get("salary_from")
+        if salary_from and salary_from.isdigit():
+            jobs = jobs.filter(salary_max__gte=int(salary_from))
+
+        posted = params.get("posted")
+        if posted in ("1", "7", "30"):
+            since = timezone.now() - timedelta(days=int(posted))
+            jobs = jobs.filter(created_at__gte=since)
+
         return jobs
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         params = self.request.GET.copy()
         params.pop("page", None)
+
         context["querystring"] = params.urlencode()
+        context["categories"] = Job.CATEGORY_CHOICES
+        context["levels"] = Job.LEVEL_CHOICES
+        context["work_modes"] = Job.WORK_MODE_CHOICES
+        context["posted_options"] = [
+            ("", "Any time"),
+            ("1", "Last 24 hours"),
+            ("7", "Last 7 days"),
+            ("30", "Last 30 days"),
+        ]
+        context["sort_options"] = [
+            ("", "Newest first"),
+            ("oldest", "Oldest first"),
+            ("salary", "Highest salary"),
+        ]
+
         return context
 
 class JobDetailView(DetailView):

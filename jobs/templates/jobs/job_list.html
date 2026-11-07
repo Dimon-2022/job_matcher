@@ -10,6 +10,71 @@
     {% endif %}
 </div>
 
+<form method="GET" class="card card-body shadow-sm mb-4">
+    <div class="row g-2">
+        <div class="col-md-4">
+            <input type="text" name="q" class="form-control" placeholder="Job title or keyword"
+                   value="{{ request.GET.q }}">
+        </div>
+        <div class="col-md-3">
+            <input type="text" name="location" class="form-control" placeholder="City"
+                   value="{{ request.GET.location }}">
+        </div>
+        <div class="col-md-3">
+            <select name="category" class="form-select">
+                <option value="">All categories</option>
+                {% for value, label in categories %}
+                    <option value="{{ value }}" {% if request.GET.category == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-2">
+            <button type="submit" class="btn btn-primary w-100">Search</button>
+        </div>
+    </div>
+
+    <div class="row g-2 mt-1">
+        <div class="col-md-2">
+            <select name="level" class="form-select">
+                <option value="">Any level</option>
+                {% for value, label in levels %}
+                    <option value="{{ value }}" {% if request.GET.level == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-2">
+            <select name="work_mode" class="form-select">
+                <option value="">Any work mode</option>
+                {% for value, label in work_modes %}
+                    <option value="{{ value }}" {% if request.GET.work_mode == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-3">
+            <div class="input-group">
+                <span class="input-group-text">From</span>
+                <input type="number" name="salary_from" class="form-control" step="100" min="0"
+                       placeholder="Salary" value="{{ request.GET.salary_from }}">
+                <span class="input-group-text">€</span>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <select name="posted" class="form-select">
+                {% for value, label in posted_options %}
+                    <option value="{{ value }}" {% if request.GET.posted == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-3">
+            <select name="sort" class="form-select">
+                {% for value, label in sort_options %}
+                    <option value="{{ value }}" {% if request.GET.sort == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+</form>
+
 {% for job in page_obj %}
     <div class="card mb-3 shadow-sm">
         <div class="card-body">
