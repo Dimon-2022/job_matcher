@@ -7,6 +7,7 @@ from django.db.models import F, Q
 from datetime import timedelta
 from django.utils import timezone
 
+
 class JobListView(ListView):
     model = Job
     template_name = "jobs/job_list.html"
@@ -73,11 +74,18 @@ class JobListView(ListView):
             ("salary", "Highest salary"),
         ]
 
+        page_obj = context["page_obj"]
+        context["page_range"] = page_obj.paginator.get_elided_page_range(
+            page_obj.number, on_each_side=2, on_ends=1
+        )
+
         return context
+
 
 class JobDetailView(DetailView):
     model = Job
     template_name = "jobs/job_detail.html"
+
 
 class JobCreateView(EmployerRequiredMixin, CreateView):
     model = Job
@@ -89,11 +97,13 @@ class JobCreateView(EmployerRequiredMixin, CreateView):
         form.instance.owner = self.request.user
         return super().form_valid(form)
 
+
 class MyJobsView(EmployerRequiredMixin, ListView):
     template_name = 'jobs/my_jobs.html'
 
     def get_queryset(self):
         return Job.objects.filter(owner=self.request.user).order_by('-created_at')
+
 
 class JobUpdateView(EmployerRequiredMixin, UpdateView):
     model = Job
@@ -103,6 +113,7 @@ class JobUpdateView(EmployerRequiredMixin, UpdateView):
 
     def get_queryset(self):
         return Job.objects.filter(owner=self.request.user)
+
 
 class JobDeleteView(EmployerRequiredMixin, DeleteView):
     model = Job
