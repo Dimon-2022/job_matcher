@@ -21,9 +21,13 @@ class JobListView(ListView):
         if q:
             jobs = jobs.filter(Q(title__icontains=q) | Q(description__icontains=q))
 
+        company = params.get("company")
+        if company:
+            jobs = jobs.filter(company__iexact=company)
+
         location = params.get("location")
         if location:
-            jobs = jobs.filter(location__iexact=location)
+            jobs = jobs.filter(Q(location__iexact=location) | Q(work_mode="remote"))
 
         for field in ("category", "level", "job_type", "work_mode"):
             value = params.get(field)

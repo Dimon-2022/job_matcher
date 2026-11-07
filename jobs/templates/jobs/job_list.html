@@ -92,7 +92,7 @@
             </div>
 
             <p class="text-muted mb-2">
-                {{ job.company }}
+                <a href="{% url 'job_list' %}?company={{ job.company|urlencode }}" class="text-muted">{{ job.company }}</a>
                 {% if job.location %}
                     · <a href="{% url 'job_list' %}?location={{ job.location|urlencode }}" class="text-muted">{{ job.location }}</a>
                 {% endif %}
