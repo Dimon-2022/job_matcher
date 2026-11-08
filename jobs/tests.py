@@ -1,6 +1,7 @@
 from django.contrib.auth.models import User
 from django.test import TestCase
 from django.urls import reverse
+from unittest.mock import patch
 
 from accounts.models import Profile
 from .models import Job
@@ -36,12 +37,13 @@ class JobAccessTests(TestCase):
         response = self.client.get(reverse("job_create"))
         self.assertEqual(response.status_code, 403)
 
-    def test_employer_can_create_job(self):
+    @patch("jobs.forms.geocode", return_value={"name": "Bratislava", "lat": 48.14, "lon": 17.10})
+    def test_employer_can_create_job(self, mock_geocode):
         self.client.force_login(self.employer)
         response = self.client.post(reverse("job_create"), {
             "title": "Data Analyst",
             "company": "InsightLab",
-            "location": "Bratislava",
+            "location": "bratislava",
             "work_mode": "onsite",
             "category": "data_analyst",
             "level": "junior",
@@ -51,6 +53,8 @@ class JobAccessTests(TestCase):
         self.assertEqual(response.status_code, 302)
         new_job = Job.objects.get(title="Data Analyst")
         self.assertEqual(new_job.owner, self.employer)
+        self.assertEqual(new_job.location, "Bratislava")
+        self.assertEqual(new_job.latitude, 48.14)
 
     def test_owner_can_edit_job(self):
         self.client.force_login(self.employer)
@@ -68,12 +72,13 @@ class JobAccessTests(TestCase):
         self.assertEqual(response.status_code, 404)
         self.assertTrue(Job.objects.filter(pk=self.job.pk).exists())
 
-    def test_onsite_job_requires_location(self):
+    @patch("jobs.forms.geocode", return_value=None)
+    def test_unknown_location_is_rejected(self, mock_geocode):
         self.client.force_login(self.employer)
         response = self.client.post(reverse("job_create"), {
             "title": "Backend Developer",
             "company": "CodeWave",
-            "location": "",
+            "location": "Asdfghjkl",
             "work_mode": "onsite",
             "category": "backend",
             "level": "junior",

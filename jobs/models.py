@@ -70,6 +70,8 @@ class Job(models.Model):
     title = models.CharField(max_length=200)
     company = models.CharField(max_length=200)
     location = models.CharField(max_length=200, blank=True)
+    latitude = models.FloatField(null=True, blank=True)
+    longitude = models.FloatField(null=True, blank=True)
     work_mode = models.CharField(max_length=10, choices=WORK_MODE_CHOICES, default="onsite")
     description = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)

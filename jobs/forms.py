@@ -2,6 +2,10 @@ from django import forms
 
 from .models import Job
 
+import requests
+
+from .services import geocode
+
 MAX_SALARY = 50000
 SALARY_STEP = 100
 
@@ -46,11 +50,30 @@ class JobForm(forms.ModelForm):
         cleaned_data = super().clean()
         salary_min = cleaned_data.get("salary_min")
         salary_max = cleaned_data.get("salary_max")
+        work_mode = cleaned_data.get("work_mode")
+        location = cleaned_data.get("location")
 
         if salary_min is not None and salary_max is not None and salary_min > salary_max:
             self.add_error("salary_max", "Maximum salary must be greater than or equal to minimum.")
 
-        if cleaned_data.get("work_mode") != "remote" and not cleaned_data.get("location"):
+        if work_mode != "remote" and not location:
             self.add_error("location", "Location is required for on-site and hybrid jobs.")
+
+        if location:
+            try:
+                place = geocode(location)
+            except requests.RequestException:
+                self.add_error("location", "Could not verify the location right now. Please try again later.")
+                return cleaned_data
+
+            if place is None:
+                self.add_error("location", "We couldn't find this location. Check the spelling.")
+            else:
+                cleaned_data["location"] = place["name"]
+                self.instance.latitude = place["lat"]
+                self.instance.longitude = place["lon"]
+        else:
+            self.instance.latitude = None
+            self.instance.longitude = None
 
         return cleaned_data
