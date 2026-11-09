@@ -4,6 +4,10 @@
 
 {% block title %}{% if object %}Edit job{% else %}Post a job{% endif %}{% endblock %}
 
+{% block extra_head %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+{% endblock %}
+
 {% block content %}
 <div class="row justify-content-center">
     <div class="col-md-8">
@@ -16,8 +20,89 @@
     <button type="submit" class="btn btn-primary">Save</button>
     <a href="{% url 'my_jobs' %}" class="btn btn-outline-secondary">Cancel</a>
 </form>
+                <div class="modal fade" id="mapModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title h5">Click on the map to choose a location</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="picker-map" style="height: 400px;"></div>
+                <p id="picker-status" class="text-muted small mt-2 mb-0"></p>
             </div>
         </div>
     </div>
 </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+    const locationInput = document.getElementById("id_location");
+
+    const group = document.createElement("div");
+    group.className = "input-group";
+    locationInput.parentNode.insertBefore(group, locationInput);
+    group.appendChild(locationInput);
+
+    const pickButton = document.createElement("button");
+    pickButton.type = "button";
+    pickButton.className = "btn btn-outline-secondary";
+    pickButton.textContent = "📍 Map";
+    pickButton.setAttribute("data-bs-toggle", "modal");
+    pickButton.setAttribute("data-bs-target", "#mapModal");
+    group.appendChild(pickButton);
+
+    const status = document.getElementById("picker-status");
+    let map = null;
+    let marker = null;
+
+    document.getElementById("mapModal").addEventListener("shown.bs.modal", () => {
+        if (!map) {
+            map = L.map("picker-map").setView([48.7, 19.7], 7);
+            L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+                maxZoom: 19,
+                attribution: "&copy; OpenStreetMap contributors",
+            }).addTo(map);
+            map.on("click", onMapClick);
+        }
+        map.invalidateSize();
+    });
+
+    async function onMapClick(event) {
+        const { lat, lng } = event.latlng;
+
+        if (marker) {
+            marker.setLatLng(event.latlng);
+        } else {
+            marker = L.marker(event.latlng).addTo(map);
+        }
+
+        status.textContent = "Looking up the place...";
+
+        try {
+            const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&zoom=10&accept-language=en`;
+            const response = await fetch(url);
+            const data = await response.json();
+            const address = data.address || {};
+            const city = address.city || address.town || address.village || address.municipality;
+
+            if (!city) {
+                status.textContent = "No town here. Try clicking closer to a city.";
+                return;
+            }
+
+            locationInput.value = city;
+            status.textContent = `Selected: ${city}`;
+            bootstrap.Modal.getInstance(document.getElementById("mapModal")).hide();
+        } catch (error) {
+            status.textContent = "Could not look up the place. Type the city manually.";
+        }
+    }
+</script>
 {% endblock %}

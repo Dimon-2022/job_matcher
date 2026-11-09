@@ -2,6 +2,10 @@
 
 {% block title %}{{ job.title }}{% endblock %}
 
+{% block extra_head %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+{% endblock %}
+
 {% block content %}
 <div class="card shadow-sm">
     <div class="card-body p-4">
@@ -28,6 +32,14 @@
         <h2 class="h6">Description</h2>
         <div>{{ job.description|linebreaks }}</div>
 
+        {% if job.latitude and job.longitude %}
+        <h2 class="h6 mt-4">Location</h2>
+        <div id="job-map" class="rounded border mb-3" style="height: 250px;"
+             data-lat="{{ job.latitude|stringformat:'f' }}"
+             data-lon="{{ job.longitude|stringformat:'f' }}"
+             data-title="{{ job.location }}"></div>
+        {% endif %}
+
         {% if job.url %}
         <a href="{{ job.url }}" target="_blank" rel="noopener noreferrer nofollow"
            class="btn btn-primary mt-3">
@@ -38,4 +50,25 @@
         <a href="{% url 'job_list' %}" class="btn btn-outline-secondary mt-3">← Back to all jobs</a>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+    const mapEl = document.getElementById("job-map");
+
+    if (mapEl) {
+        const lat = parseFloat(mapEl.dataset.lat);
+        const lon = parseFloat(mapEl.dataset.lon);
+
+        const map = L.map(mapEl).setView([lat, lon], 12);
+
+        L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+            maxZoom: 19,
+            attribution: "&copy; OpenStreetMap contributors",
+        }).addTo(map);
+
+        L.marker([lat, lon]).addTo(map).bindPopup(mapEl.dataset.title);
+    }
+</script>
 {% endblock %}
