@@ -13,12 +13,10 @@
 <form method="GET" class="card card-body shadow-sm mb-4">
     <div class="row g-2">
         <div class="col-md-4">
-            <input type="text" name="q" class="form-control" placeholder="Job title or keyword"
-                   value="{{ request.GET.q }}">
+            <input type="text" name="q" class="form-control" placeholder="Job title or keyword" value="{{ request.GET.q }}">
         </div>
         <div class="col-md-3">
-            <input type="text" name="location" class="form-control" placeholder="City"
-                   value="{{ request.GET.location }}">
+            <input type="text" name="location" class="form-control" placeholder="City" value="{{ request.GET.location }}">
         </div>
         <div class="col-md-3">
             <select name="category" class="form-select">
@@ -53,8 +51,7 @@
         <div class="col-md-3">
             <div class="input-group">
                 <span class="input-group-text">From</span>
-                <input type="number" name="salary_from" class="form-control" step="100" min="0"
-                       placeholder="Salary" value="{{ request.GET.salary_from }}">
+                <input type="number" name="salary_from" class="form-control" step="100" min="0" placeholder="Salary" value="{{ request.GET.salary_from }}">
                 <span class="input-group-text">€</span>
             </div>
         </div>
@@ -95,6 +92,9 @@
                 <a href="{% url 'job_list' %}?company={{ job.company|urlencode }}" class="text-muted">{{ job.company }}</a>
                 {% if job.location %}
                     · <a href="{% url 'job_list' %}?location={{ job.location|urlencode }}" class="text-muted">{{ job.location }}</a>
+                {% endif %}
+                {% if job.source != "manual" %}
+                    <span class="badge text-bg-light border ms-1">via {{ job.get_source_display }}</span>
                 {% endif %}
             </p>
 

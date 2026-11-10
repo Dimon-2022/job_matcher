@@ -9,6 +9,9 @@
 {% block content %}
 <div class="card shadow-sm">
     <div class="card-body p-4">
+        {% if job.source != "manual" %}
+    <span class="badge text-bg-light border">via {{ job.get_source_display }}</span>
+{% endif %}
         <h1 class="h3 mb-1">{{ job.title }}</h1>
         <p class="text-muted mb-3">{{ job.company }} · {{ job.location }} · Posted {{ job.created_at|date:"d M Y" }}</p>
 
