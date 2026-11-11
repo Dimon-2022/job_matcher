@@ -8,6 +8,18 @@ from .forms import ResumeForm
 from .models import Resume
 from .services import extract_text_from_pdf
 
+from django.http import FileResponse
+from django.shortcuts import get_object_or_404
+
+@login_required
+def resume_file(request, pk):
+    resume = get_object_or_404(Resume, pk=pk, owner=request.user)
+    return FileResponse(
+        resume.file.open("rb"),
+        content_type="application/pdf",
+        filename=f"resume-{resume.pk}.pdf",
+    )
+
 @login_required
 def upload_resume(request):
     if request.method == "POST":

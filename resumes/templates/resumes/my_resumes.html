@@ -23,6 +23,7 @@
             <div class="text-nowrap">
                 <a href="{% url 'match_results' resume.pk %}" class="btn btn-outline-primary btn-sm">View matches</a>
                 <a href="{% url 'resume_delete' resume.pk %}" class="btn btn-outline-danger btn-sm">Delete</a>
+                <a href="{% url 'resume_file' resume.pk %}" target="_blank" class="btn btn-outline-secondary btn-sm">View PDF</a>
             </div>
         </div>
     </div>
