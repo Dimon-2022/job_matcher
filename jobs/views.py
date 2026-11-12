@@ -3,9 +3,13 @@ from django.views.generic import ListView, DetailView, CreateView, UpdateView, D
 from accounts.mixins import EmployerRequiredMixin
 from .forms import JobForm
 from .models import Job
-from django.db.models import F, Q
+from django.db.models import F, Q, Count
 from datetime import timedelta
 from django.utils import timezone
+
+
+from django.db.models.functions import TruncWeek
+from django.views.generic import TemplateView
 
 
 class JobListView(ListView):
@@ -126,3 +130,45 @@ class JobDeleteView(EmployerRequiredMixin, DeleteView):
 
     def get_queryset(self):
         return Job.objects.filter(owner=self.request.user)
+
+class StatsView(TemplateView):
+    template_name = "jobs/stats.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        jobs = Job.objects.all()
+        total = jobs.count()
+
+        category_labels = dict(Job.CATEGORY_CHOICES)
+        by_category = (
+            jobs.values("category")
+            .annotate(
+                total=Count("id"),
+                junior=Count("id", filter=Q(level__in=["intern", "junior"])),
+            )
+            .order_by("-total")
+        )
+
+        for row in by_category:
+            row["label"] = category_labels.get(row["category"], row["category"])
+            row["junior_share"] = round(row["junior"] / row["total"] * 100) if row["total"] else 0
+
+        level_labels = dict(Job.LEVEL_CHOICES)
+        by_level = jobs.values("level").annotate(total=Count("id")).order_by("-total")
+        for row in by_level:
+            row["label"] = level_labels.get(row["level"], row["level"])
+
+        by_week = (
+            jobs.annotate(week=TruncWeek("created_at"))
+            .values("week")
+            .annotate(total=Count("id"))
+            .order_by("week")
+        )
+
+        context.update({
+            "total": total,
+            "by_category": by_category,
+            "by_level": by_level,
+            "by_week": by_week,
+        })
+        return context

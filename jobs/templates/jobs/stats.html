@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block title %}IT job market stats{% endblock %}
+
+{% block content %}
+<h1 class="h3 mb-1">IT job market</h1>
+<p class="text-muted mb-4">Based on {{ total }} job{{ total|pluralize }} on Job Matcher</p>
+
+<div class="row g-4">
+    <div class="col-lg-7">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h2 class="h5 mb-3">Jobs by category</h2>
+                <table class="table table-sm align-middle mb-0">
+                    <thead>
+                        <tr><th>Category</th><th class="text-end">Jobs</th><th class="text-end">Open to juniors</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for row in by_category %}
+                            <tr>
+                                <td><a href="{% url 'job_list' %}?category={{ row.category }}" class="text-decoration-none">{{ row.label }}</a></td>
+                                <td class="text-end">{{ row.total }}</td>
+                                <td class="text-end">{{ row.junior_share }}%</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-5">
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+                <h2 class="h5 mb-3">Jobs by level</h2>
+                {% for row in by_level %}
+                    <div class="d-flex justify-content-between border-bottom py-1">
+                        <span>{{ row.label }}</span><strong>{{ row.total }}</strong>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h2 class="h5 mb-3">Posted per week</h2>
+                {% for row in by_week %}
+                    <div class="d-flex justify-content-between border-bottom py-1">
+                        <span>Week of {{ row.week|date:"d M" }}</span><strong>{{ row.total }}</strong>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
