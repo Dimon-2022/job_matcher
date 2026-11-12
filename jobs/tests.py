@@ -3,6 +3,12 @@ from django.test import TestCase
 from django.urls import reverse
 from unittest.mock import patch
 
+from io import StringIO
+from unittest.mock import patch, MagicMock
+
+import requests
+from django.core.management import call_command
+
 from accounts.models import Profile
 from .models import Job
 
@@ -101,3 +107,107 @@ class JobAccessTests(TestCase):
             "description": "Build APIs with Django.",
         })
         self.assertEqual(response.status_code, 302)
+
+FAKE_API_RESPONSE = {
+    "jobs": [
+        {
+            "id": 101,
+            "title": "Senior Backend Developer",
+            "company_name": "CloudNest",
+            "description": "<p>Build APIs with <strong>Python</strong> and Django.</p>",
+            "candidate_required_location": "Europe",
+            "job_type": "full_time",
+            "url": "https://remotive.com/jobs/101",
+            "publication_date": "2026-11-01T10:00:00",
+        },
+        {
+            "id": 102,
+            "title": "Freelance Copywriter",
+            "company_name": "WordsCo",
+            "description": "Write marketing texts.",
+            "candidate_required_location": "Worldwide",
+            "job_type": "freelance",
+            "url": "https://remotive.com/jobs/102",
+            "publication_date": "2026-11-02T10:00:00",
+        },
+        {
+            "id": 103,
+            "title": "Junior Frontend Developer",
+            "company_name": "PixelCraft",
+            "description": "React and TypeScript.",
+            "candidate_required_location": "Worldwide",
+            "job_type": "internship",
+            "url": "http://insecure-site.com/job",
+            "publication_date": "2026-11-03T10:00:00",
+        },
+    ]
+}
+
+
+def fake_response(data):
+    response = MagicMock()
+    response.json.return_value = data
+    response.raise_for_status.return_value = None
+    return response
+
+
+@patch("jobs.management.commands.import_remotive.requests.get")
+class ImportRemotiveTests(TestCase):
+
+    def run_import(self):
+        out = StringIO()
+        call_command("import_remotive", "--limit", "50", stdout=out)
+        return out.getvalue()
+
+    def test_it_jobs_are_imported(self, mock_get):
+        mock_get.return_value = fake_response(FAKE_API_RESPONSE)
+        self.run_import()
+
+        self.assertEqual(Job.objects.filter(source="remotive").count(), 2)
+
+        job = Job.objects.get(external_id="101")
+        self.assertEqual(job.company, "CloudNest")
+        self.assertEqual(job.work_mode, "remote")
+        self.assertEqual(job.category, "backend")
+        self.assertEqual(job.level, "senior")
+
+    def test_non_it_jobs_are_skipped(self, mock_get):
+        mock_get.return_value = fake_response(FAKE_API_RESPONSE)
+        output = self.run_import()
+
+        self.assertFalse(Job.objects.filter(external_id="102").exists())
+        self.assertIn("skipped", output)
+
+    def test_second_run_does_not_create_duplicates(self, mock_get):
+        mock_get.return_value = fake_response(FAKE_API_RESPONSE)
+        self.run_import()
+        self.run_import()
+
+        self.assertEqual(Job.objects.filter(source="remotive").count(), 2)
+
+    def test_html_is_stripped_from_description(self, mock_get):
+        mock_get.return_value = fake_response(FAKE_API_RESPONSE)
+        self.run_import()
+
+        job = Job.objects.get(external_id="101")
+        self.assertNotIn("<p>", job.description)
+        self.assertIn("Build APIs with Python and Django.", job.description)
+
+    def test_non_https_url_is_not_saved(self, mock_get):
+        mock_get.return_value = fake_response(FAKE_API_RESPONSE)
+        self.run_import()
+
+        job = Job.objects.get(external_id="103")
+        self.assertEqual(job.url, "")
+        self.assertEqual(job.job_type, "internship")
+        self.assertEqual(job.level, "junior")
+
+    def test_api_error_does_not_crash(self, mock_get):
+        mock_get.side_effect = requests.ConnectionError("API is down")
+        out = StringIO()
+        err = StringIO()
+
+        call_command("import_remotive", stdout=out, stderr=err)
+
+        self.assertEqual(Job.objects.filter(source="remotive").count(), 0)
+        self.assertIn("Request failed", err.getvalue())
