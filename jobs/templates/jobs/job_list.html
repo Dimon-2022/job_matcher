@@ -1,12 +1,17 @@
 {% extends "base.html" %}
 
-{% block title %}All jobs{% endblock %}
+{% block title %}{% if student_page %}Jobs for students{% else %}All jobs{% endif %}{% endblock %}
 
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h1 class="h3 mb-0">All jobs</h1>
+    <div>
+        <h1 class="h3 mb-1">{% if student_page %}Jobs for students{% else %}All jobs{% endif %}</h1>
+        {% if student_page %}
+            <p class="text-muted mb-0">Internships, part-time and junior positions that fit your study schedule.</p>
+        {% endif %}
+    </div>
     {% if request.GET %}
-        <a href="{% url 'job_list' %}" class="btn btn-outline-secondary btn-sm">Clear filters</a>
+        <a href="{{ request.path }}" class="btn btn-outline-secondary btn-sm">Clear filters</a>
     {% endif %}
 </div>
 
@@ -89,9 +94,9 @@
             </div>
 
             <p class="text-muted mb-2">
-                <a href="{% url 'job_list' %}?company={{ job.company|urlencode }}" class="text-muted">{{ job.company }}</a>
+                <a href="{{ request.path }}?company={{ job.company|urlencode }}" class="text-muted">{{ job.company }}</a>
                 {% if job.location %}
-                    · <a href="{% url 'job_list' %}?location={{ job.location|urlencode }}" class="text-muted">{{ job.location }}</a>
+                    · · <a href="{{ request.path }}?location={{ job.location|urlencode }}" class="text-muted">{{ job.location }}</a>
                 {% endif %}
                 {% if job.source != "manual" %}
                     <span class="badge text-bg-light border ms-1">via {{ job.get_source_display }}</span>
@@ -99,15 +104,15 @@
             </p>
 
             <p class="mb-2">
-                <a href="{% url 'job_list' %}?work_mode={{ job.work_mode }}" class="badge text-bg-info text-decoration-none">{{ job.get_work_mode_display }}</a>
-                <a href="{% url 'job_list' %}?level={{ job.level }}" class="badge text-bg-warning text-decoration-none">{{ job.get_level_display }}</a>
-                <a href="{% url 'job_list' %}?category={{ job.category }}" class="badge text-bg-dark text-decoration-none">{{ job.get_category_display }}</a>
+                <a href="{{ request.path }}?work_mode={{ job.work_mode }}" class="badge text-bg-info text-decoration-none">{{ job.get_work_mode_display }}</a>
+<a href="{{ request.path }}?level={{ job.level }}" class="badge text-bg-warning text-decoration-none">{{ job.get_level_display }}</a>
+<a href="{{ request.path }}?category={{ job.category }}" class="badge text-bg-dark text-decoration-none">{{ job.get_category_display }}</a>
             </p>
 
             <p class="mb-2">{{ job.description|truncatewords:25 }}</p>
 
             {% for skill in job.skills.all %}
-                <a href="{% url 'job_list' %}?skill={{ skill.name|urlencode }}" class="badge text-bg-primary text-decoration-none">{{ skill }}</a>
+                <a href="{{ request.path }}?skill={{ skill.name|urlencode }}" class="badge text-bg-primary text-decoration-none">{{ skill }}</a>
             {% endfor %}
 
             <p class="text-muted small mt-2 mb-0">Posted {{ job.created_at|timesince }} ago</p>

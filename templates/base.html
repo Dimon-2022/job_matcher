@@ -13,6 +13,7 @@
         <a class="navbar-brand" href="{% url 'job_list' %}">Job Matcher</a>
         <div>
             <a class="btn btn-outline-light btn-sm me-2" href="{% url 'job_list' %}">Jobs</a>
+            <a class="btn btn-outline-light btn-sm me-2" href="{% url 'student_jobs' %}">🎓 Students</a>
             <a class="btn btn-outline-light btn-sm me-2" href="{% url 'job_stats' %}">Stats</a>
             {% if user.is_authenticated %}
                 {% if user.profile.role == "seeker" %}

@@ -89,6 +89,19 @@ class JobListView(ListView):
 
         return context
 
+class StudentJobsView(JobListView):
+    student_page = True
+
+    def get_queryset(self):
+        return super().get_queryset().filter(
+            Q(job_type__in=["internship", "part_time", "brigada"])
+            | Q(level__in=["intern", "junior"])
+        )
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["student_page"] = True
+        return context
 
 class JobDetailView(DetailView):
     model = Job
