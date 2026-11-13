@@ -165,10 +165,23 @@ class StatsView(TemplateView):
             .order_by("week")
         )
 
+        chart_data = {
+            "categories": {
+                "labels": [row["label"] for row in by_category],
+                "totals": [row["total"] for row in by_category],
+                "junior_share": [row["junior_share"] for row in by_category],
+            },
+            "weeks": {
+                "labels": [row["week"].strftime("%d %b") for row in by_week],
+                "totals": [row["total"] for row in by_week],
+            },
+        }
+
         context.update({
             "total": total,
             "by_category": by_category,
             "by_level": by_level,
             "by_week": by_week,
+            "chart_data": chart_data,
         })
         return context
