@@ -11,7 +11,9 @@
         <div class="card shadow-sm h-100">
             <div class="card-body">
                 <h2 class="h5 mb-3">Jobs by category</h2>
-                <canvas id="categoryChart" height="220"></canvas>
+                <div style="position: relative; height: 280px;">
+    <canvas id="categoryChart"></canvas>
+</div>
             </div>
         </div>
     </div>
@@ -19,7 +21,9 @@
         <div class="card shadow-sm h-100">
             <div class="card-body">
                 <h2 class="h5 mb-3">Posted per week</h2>
-                <canvas id="weekChart" height="220"></canvas>
+                <div style="position: relative; height: 280px;">
+    <canvas id="weekChart"></canvas>
+</div>
             </div>
         </div>
     </div>
@@ -91,6 +95,7 @@
             ],
         },
         options: {
+            maintainAspectRatio: false,
             indexAxis: "y",
             scales: {
                 x: { beginAtZero: true },
@@ -100,15 +105,16 @@
     });
 
     new Chart(document.getElementById("weekChart"), {
-        type: "line",
-        data: {
-            labels: data.weeks.labels,
-            datasets: [{ label: "Jobs posted", data: data.weeks.totals, tension: 0.3, fill: true }],
-        },
-        options: {
-            scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
-            plugins: { legend: { display: false } },
-        },
-    });
+    type: "bar",
+    data: {
+        labels: data.weeks.labels,
+        datasets: [{ label: "Jobs posted", data: data.weeks.totals, borderRadius: 4 }],
+    },
+    options: {
+        maintainAspectRatio: false,
+        scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
+        plugins: { legend: { display: false } },
+    },
+});
 </script>
 {% endblock %}

@@ -12,6 +12,8 @@ JOB_TYPE_MAP = {
     "full_time": "full_time",
     "part_time": "part_time",
     "internship": "internship",
+    "freelance": "freelance",
+    "contract": "freelance",
 }
 
 CATEGORY_KEYWORDS = [

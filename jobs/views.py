@@ -16,6 +16,8 @@ class JobListView(ListView):
     model = Job
     template_name = "jobs/job_list.html"
     paginate_by = 10
+    page_title = "All jobs"
+    page_subtitle = ""
 
     def get_queryset(self):
         jobs = Job.objects.prefetch_related("skills")
@@ -31,7 +33,10 @@ class JobListView(ListView):
 
         location = params.get("location")
         if location:
-            jobs = jobs.filter(Q(location__iexact=location) | Q(work_mode="remote"))
+            city_filter = Q(location__iexact=location)
+            if params.get("include_remote"):
+                city_filter |= Q(work_mode="remote")
+            jobs = jobs.filter(city_filter)
 
         for field in ("category", "level", "job_type", "work_mode"):
             value = params.get(field)
@@ -87,10 +92,14 @@ class JobListView(ListView):
             page_obj.number, on_each_side=2, on_ends=1
         )
 
+        context["page_title"] = self.page_title
+        context["page_subtitle"] = self.page_subtitle
+
         return context
 
 class StudentJobsView(JobListView):
-    student_page = True
+    page_title = "Jobs for students"
+    page_subtitle = "Internships, part-time and junior positions that fit your study schedule."
 
     def get_queryset(self):
         return super().get_queryset().filter(
@@ -98,10 +107,13 @@ class StudentJobsView(JobListView):
             | Q(level__in=["intern", "junior"])
         )
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context["student_page"] = True
-        return context
+
+class FreelanceJobsView(JobListView):
+    page_title = "Freelance jobs"
+    page_subtitle = "Project-based and contract work you can do on your own schedule."
+
+    def get_queryset(self):
+        return super().get_queryset().filter(job_type="freelance")
 
 class JobDetailView(DetailView):
     model = Job

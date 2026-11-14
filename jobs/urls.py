@@ -11,4 +11,5 @@ urlpatterns = [
     path("<int:pk>/delete/", views.JobDeleteView.as_view(), name="job_delete"),
     path("stats/", views.StatsView.as_view(), name="job_stats"),
     path("students/", views.StudentJobsView.as_view(), name="student_jobs"),
+    path("freelance/", views.FreelanceJobsView.as_view(), name="freelance_jobs"),
 ]

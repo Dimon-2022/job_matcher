@@ -55,6 +55,7 @@ class Job(models.Model):
     JOB_TYPE_CHOICES = [
         ("full_time", "Full-time"),
         ("part_time", "Part-time"),
+        ("freelance", "Freelance / Contract"),
         ("internship", "Internship"),
         ("brigada", "Student job"),
     ]
