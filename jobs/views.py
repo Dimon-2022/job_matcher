@@ -6,7 +6,7 @@ from .models import Job
 from django.db.models import F, Q, Count
 from datetime import timedelta
 from django.utils import timezone
-
+from datetime import timedelta
 
 from django.db.models.functions import TruncWeek
 from django.views.generic import TemplateView
@@ -164,8 +164,9 @@ class StatsView(TemplateView):
         jobs = Job.objects.all()
         total = jobs.count()
 
+        # Jobs by category + junior share
         category_labels = dict(Job.CATEGORY_CHOICES)
-        by_category = (
+        by_category = list(
             jobs.values("category")
             .annotate(
                 total=Count("id"),
@@ -173,28 +174,52 @@ class StatsView(TemplateView):
             )
             .order_by("-total")
         )
-
         for row in by_category:
             row["label"] = category_labels.get(row["category"], row["category"])
             row["junior_share"] = round(row["junior"] / row["total"] * 100) if row["total"] else 0
 
+        # Jobs by level
         level_labels = dict(Job.LEVEL_CHOICES)
-        by_level = jobs.values("level").annotate(total=Count("id")).order_by("-total")
+        by_level = list(jobs.values("level").annotate(total=Count("id")).order_by("-total"))
         for row in by_level:
             row["label"] = level_labels.get(row["level"], row["level"])
 
-        by_week = (
+        # Jobs per week
+        by_week = list(
             jobs.annotate(week=TruncWeek("created_at"))
             .values("week")
             .annotate(total=Count("id"))
             .order_by("week")
         )
 
+        if by_week:
+            totals_by_week = {row["week"]: row["total"] for row in by_week}
+            week = by_week[0]["week"]
+            last_week = by_week[-1]["week"]
+            by_week = []
+            while week <= last_week:
+                by_week.append({"week": week, "total": totals_by_week.get(week, 0)})
+                week += timedelta(weeks=1)
+
+        # Level structure inside each category
+        category_order = [row["category"] for row in by_category]
+        counts = {}
+        for row in jobs.values("category", "level").annotate(total=Count("id")):
+            counts.setdefault(row["category"], {})[row["level"]] = row["total"]
+
+        level_series = [
+            {
+                "label": label,
+                "counts": [counts.get(category, {}).get(level, 0) for category in category_order],
+            }
+            for level, label in Job.LEVEL_CHOICES
+        ]
+
         chart_data = {
             "categories": {
                 "labels": [row["label"] for row in by_category],
                 "totals": [row["total"] for row in by_category],
-                "junior_share": [row["junior_share"] for row in by_category],
+                "levels": level_series,
             },
             "weeks": {
                 "labels": [row["week"].strftime("%d %b") for row in by_week],

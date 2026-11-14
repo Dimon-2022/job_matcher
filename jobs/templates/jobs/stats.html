@@ -7,29 +7,40 @@
 <p class="text-muted mb-4">Based on {{ total }} job{{ total|pluralize }} on Job Matcher</p>
 
 <div class="row g-4 mb-4">
-    <div class="col-lg-7">
+    <div class="col-lg-6">
         <div class="card shadow-sm h-100">
             <div class="card-body">
                 <h2 class="h5 mb-3">Jobs by category</h2>
                 <div style="position: relative; height: 280px;">
-    <canvas id="categoryChart"></canvas>
-</div>
+                    <canvas id="categoryChart"></canvas>
+                </div>
             </div>
         </div>
     </div>
-    <div class="col-lg-5">
+
+    <div class="col-lg-6">
         <div class="card shadow-sm h-100">
             <div class="card-body">
+                <h2 class="h5 mb-1">Experience level by category</h2>
+                <p class="text-muted small mb-3">Share of each level within a category</p>
+                <div style="position: relative; height: 256px;">
+                    <canvas id="levelChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12">
+        <div class="card shadow-sm">
+            <div class="card-body">
                 <h2 class="h5 mb-3">Posted per week</h2>
-                <div style="position: relative; height: 280px;">
-    <canvas id="weekChart"></canvas>
-</div>
+                <div style="position: relative; height: 240px;">
+                    <canvas id="weekChart"></canvas>
+                </div>
             </div>
         </div>
     </div>
 </div>
-
-{{ chart_data|json_script:"chart-data" }}
 
 <div class="row g-4">
     <div class="col-lg-7">
@@ -38,7 +49,11 @@
                 <h2 class="h5 mb-3">Jobs by category</h2>
                 <table class="table table-sm align-middle mb-0">
                     <thead>
-                        <tr><th>Category</th><th class="text-end">Jobs</th><th class="text-end">Open to juniors</th></tr>
+                        <tr>
+                            <th>Category</th>
+                            <th class="text-end">Jobs</th>
+                            <th class="text-end">Open to juniors</th>
+                        </tr>
                     </thead>
                     <tbody>
                         {% for row in by_category %}
@@ -78,6 +93,8 @@
         </div>
     </div>
 </div>
+
+{{ chart_data|json_script:"chart-data" }}
 {% endblock %}
 
 {% block extra_js %}
@@ -85,35 +102,104 @@
 <script>
     const data = JSON.parse(document.getElementById("chart-data").textContent);
 
+    const BRAND = "#0d6efd";
+    const GRID = "rgba(0, 0, 0, 0.06)";
+    const LEVEL_COLORS = ["#9ec5fe", "#6ea8fe", "#3d8bfd", "#0d6efd", "#084298"];
+
+    const barStyle = {
+        backgroundColor: BRAND,
+        borderRadius: 4,
+        maxBarThickness: 18,
+    };
+
+    // 1. Jobs by category
     new Chart(document.getElementById("categoryChart"), {
         type: "bar",
         data: {
             labels: data.categories.labels,
-            datasets: [
-                { label: "Jobs", data: data.categories.totals },
-                { label: "Open to juniors, %", data: data.categories.junior_share, yAxisID: "percent" },
-            ],
+            datasets: [{ label: "Jobs", data: data.categories.totals, ...barStyle }],
         },
         options: {
-            maintainAspectRatio: false,
             indexAxis: "y",
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
             scales: {
-                x: { beginAtZero: true },
-                percent: { display: false, min: 0, max: 100 },
+                x: { beginAtZero: true, grid: { color: GRID }, ticks: { precision: 0 } },
+                y: { grid: { display: false } },
             },
         },
     });
 
-    new Chart(document.getElementById("weekChart"), {
+    // 2. Experience level by category (100% stacked)
+    const totals = data.categories.totals;
+
+    new Chart(document.getElementById("levelChart"), {
+        type: "bar",
+        data: {
+            labels: data.categories.labels,
+            datasets: data.categories.levels.map((level, i) => ({
+                label: level.label,
+                counts: level.counts,
+                data: level.counts.map((count, j) => totals[j] ? count / totals[j] * 100 : 0),
+                backgroundColor: LEVEL_COLORS[i],
+                borderColor: "#ffffff",
+                borderWidth: 2,
+                maxBarThickness: 18,
+            })),
+        },
+        options: {
+            indexAxis: "y",
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: "bottom", labels: { boxWidth: 12 } },
+                tooltip: {
+                    callbacks: {
+                        label: (ctx) => {
+                            const count = ctx.dataset.counts[ctx.dataIndex];
+                            return `${ctx.dataset.label}: ${count} job${count === 1 ? "" : "s"} (${Math.round(ctx.parsed.x)}%)`;
+                        },
+                    },
+                },
+            },
+            scales: {
+                x: { stacked: true, max: 100, grid: { color: GRID }, ticks: { callback: (value) => `${value}%` } },
+                y: { stacked: true, grid: { display: false } },
+            },
+        },
+    });
+
+    // 3. Posted per week
+const weekTotals = data.weeks.totals;
+
+new Chart(document.getElementById("weekChart"), {
     type: "bar",
     data: {
         labels: data.weeks.labels,
-        datasets: [{ label: "Jobs posted", data: data.weeks.totals, borderRadius: 4 }],
+        datasets: [{
+            label: "Jobs posted",
+            data: weekTotals,
+            ...barStyle,
+            maxBarThickness: 40,
+            minBarLength: 4,
+            backgroundColor: weekTotals.map((value) => value === 0 ? "#dee2e6" : BRAND),
+        }],
     },
     options: {
         maintainAspectRatio: false,
-        scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
-        plugins: { legend: { display: false } },
+        plugins: {
+            legend: { display: false },
+            tooltip: {
+                callbacks: {
+                    label: (ctx) => ctx.parsed.y === 0
+                        ? "No jobs posted"
+                        : `${ctx.parsed.y} job${ctx.parsed.y === 1 ? "" : "s"} posted`,
+                },
+            },
+        },
+        scales: {
+            y: { beginAtZero: true, grid: { color: GRID }, ticks: { precision: 0 } },
+            x: { grid: { display: false } },
+        },
     },
 });
 </script>
