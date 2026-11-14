@@ -3,6 +3,11 @@ from django.test import TestCase
 from django.urls import reverse
 from unittest.mock import patch
 
+from datetime import timedelta
+from django.utils import timezone
+
+from .templatetags.job_extras import ago
+
 from io import StringIO
 from unittest.mock import patch, MagicMock
 
@@ -211,3 +216,24 @@ class ImportRemotiveTests(TestCase):
 
         self.assertEqual(Job.objects.filter(source="remotive").count(), 0)
         self.assertIn("Request failed", err.getvalue())
+
+class AgoFilterTests(TestCase):
+
+    def check(self, delta, expected):
+        result = ago(timezone.now() - delta).replace("\xa0", " ")
+        self.assertEqual(result, expected)
+
+    def test_just_now(self):
+        self.check(timedelta(seconds=10), "just now")
+
+    def test_days(self):
+        self.check(timedelta(days=3), "3 days ago")
+
+    def test_weeks(self):
+        self.check(timedelta(days=15), "2 weeks ago")
+
+    def test_months(self):
+        self.check(timedelta(days=70), "2 months ago")
+
+    def test_years(self):
+        self.check(timedelta(days=800), "2 years ago")
