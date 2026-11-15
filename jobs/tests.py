@@ -48,6 +48,25 @@ class JobAccessTests(TestCase):
         response = self.client.get(reverse("job_create"))
         self.assertEqual(response.status_code, 403)
 
+    def test_owner_can_close_job(self):
+        self.client.force_login(self.employer)
+        response = self.client.post(reverse("job_toggle_open", args=[self.job.pk]))
+        self.assertEqual(response.status_code, 302)
+        self.job.refresh_from_db()
+        self.assertFalse(self.job.is_open)
+
+    def test_other_employer_cannot_close_job(self):
+        self.client.force_login(self.other_employer)
+        response = self.client.post(reverse("job_toggle_open", args=[self.job.pk]))
+        self.assertEqual(response.status_code, 404)
+        self.job.refresh_from_db()
+        self.assertTrue(self.job.is_open)
+
+    def test_toggle_requires_post(self):
+        self.client.force_login(self.employer)
+        response = self.client.get(reverse("job_toggle_open", args=[self.job.pk]))
+        self.assertEqual(response.status_code, 405)
+
     @patch("jobs.forms.geocode", return_value={"name": "Bratislava", "lat": 48.14, "lon": 17.10})
     def test_employer_can_create_job(self, mock_geocode):
         self.client.force_login(self.employer)

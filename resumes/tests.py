@@ -88,6 +88,17 @@ class ResumeAccessTests(TestCase):
         response = self.client.get(reverse("resume_file", args=[self.resume.pk]))
         self.assertEqual(response.status_code, 302)
 
+    def test_filled_jobs_are_not_matched(self):
+        from jobs.models import Job
+        from matching.services import find_matching_jobs
+
+        Job.objects.create(
+            title="Python Developer", company="CodeWave",
+            description="Python developer with Django experience.", is_open=False,
+        )
+        jobs = find_matching_jobs(self.resume, threshold=0)
+        self.assertFalse(any(not job.is_open for job in jobs))
+
 
 class ResumeFormTests(TestCase):
 

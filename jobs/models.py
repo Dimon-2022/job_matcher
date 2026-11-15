@@ -87,6 +87,7 @@ class Job(models.Model):
     category = models.CharField(max_length=20, choices=CATEGORY_CHOICES, default="other")
     level = models.CharField(max_length=10, choices=LEVEL_CHOICES, default="junior")
     job_type = models.CharField(max_length=20, choices=JOB_TYPE_CHOICES, default="full_time")
+    is_open = models.BooleanField(default=True)
 
     # Location
     location = models.CharField(max_length=200, blank=True)

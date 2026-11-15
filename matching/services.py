@@ -37,7 +37,7 @@ def find_matching_jobs(resume, threshold=60):
     from jobs.models import Job
 
     resume_skills = set(resume.skills.all())
-    jobs = Job.objects.annotate(
+    jobs = Job.objects.filter(is_open=True).annotate(
         distance=CosineDistance("embedding", resume.embedding)
     ).prefetch_related("skills")
 

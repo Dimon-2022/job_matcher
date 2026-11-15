@@ -12,4 +12,5 @@ urlpatterns = [
     path("stats/", views.StatsView.as_view(), name="job_stats"),
     path("students/", views.StudentJobsView.as_view(), name="student_jobs"),
     path("freelance/", views.FreelanceJobsView.as_view(), name="freelance_jobs"),
+    path("<int:pk>/toggle/", views.JobToggleOpenView.as_view(), name="job_toggle_open"),
 ]

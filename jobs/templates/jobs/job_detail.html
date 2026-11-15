@@ -9,6 +9,10 @@
 {% block content %}
 <div class="card shadow-sm">
     <div class="card-body p-4">
+        {% if not job.is_open %}
+            <div class="alert alert-secondary mb-3">This position has been filled and is no longer accepting applications.</div>
+        {% endif %}
+        {% if job.url and job.is_open %}
         {% if job.source != "manual" %}
     <span class="badge text-bg-light border">via {{ job.get_source_display }}</span>
 {% endif %}

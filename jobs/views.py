@@ -1,18 +1,24 @@
+from datetime import timedelta
 from urllib.parse import urlencode
 
+from django.db.models import Count, F, Q
+from django.db.models.functions import TruncWeek
+from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse_lazy
-from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
+from django.utils import timezone
+from django.views import View
+from django.views.generic import (
+    CreateView,
+    DeleteView,
+    DetailView,
+    ListView,
+    TemplateView,
+    UpdateView,
+)
+
 from accounts.mixins import EmployerRequiredMixin
 from .forms import JobForm
 from .models import Job
-from django.db.models import F, Q, Count
-from datetime import timedelta
-from django.utils import timezone
-from datetime import timedelta
-
-from django.db.models.functions import TruncWeek
-from django.views.generic import TemplateView
-
 
 class JobListView(ListView):
     model = Job
@@ -49,14 +55,6 @@ class JobListView(ListView):
         if skill:
             jobs = jobs.filter(skills__name=skill)
 
-        sort = params.get("sort")
-        if sort == "salary":
-            jobs = jobs.order_by(F("salary_max").desc(nulls_last=True))
-        elif sort == "oldest":
-            jobs = jobs.order_by("created_at")
-        else:
-            jobs = jobs.order_by("-created_at")
-
         salary_from = params.get("salary_from")
         if salary_from and salary_from.isdigit():
             jobs = jobs.filter(salary_max__gte=int(salary_from))
@@ -66,7 +64,15 @@ class JobListView(ListView):
             since = timezone.now() - timedelta(days=int(posted))
             jobs = jobs.filter(created_at__gte=since)
 
-        return jobs
+        sort = params.get("sort")
+        if sort == "salary":
+            ordering = [F("salary_max").desc(nulls_last=True)]
+        elif sort == "oldest":
+            ordering = ["created_at"]
+        else:
+            ordering = ["-created_at"]
+
+        return jobs.order_by("-is_open", *ordering)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -244,3 +250,9 @@ class StatsView(TemplateView):
             "chart_data": chart_data,
         })
         return context
+
+class JobToggleOpenView(EmployerRequiredMixin, View):
+    def post(self, request, pk):
+        job = get_object_or_404(Job, pk=pk, owner=request.user)
+        Job.objects.filter(pk=job.pk).update(is_open=not job.is_open)
+        return redirect("my_jobs")
