@@ -1,22 +1,21 @@
 {% extends "base.html" %}
-{% load job_extras %}
 
 {% block title %}{{ page_title }}{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <div>
-        <h1 class="h3 mb-1">{{ page_title }}</h1>
-        {% if page_subtitle %}
-            <p class="text-muted mb-0">{{ page_subtitle }}</p>
-        {% endif %}
-    </div>
-    {% if request.GET %}
-        <a href="{{ request.path }}" class="btn btn-outline-secondary btn-sm">Clear filters</a>
+<div class="mb-4">
+    <h1 class="h3 mb-1">{{ page_title }}</h1>
+    {% if page_subtitle %}
+        <p class="text-muted mb-0">{{ page_subtitle }}</p>
     {% endif %}
 </div>
 
-<form method="GET" class="card card-body shadow-sm mb-4">
+<form method="GET" class="card card-body shadow-sm mb-4"
+      hx-get="{{ request.path }}"
+      hx-target="#job-results"
+      hx-trigger="input delay:400ms, change"
+      hx-push-url="true"
+      hx-indicator="#job-results">
     <div class="row g-2">
         <div class="col-md-4">
             <input type="text" name="q" class="form-control" placeholder="Job title or keyword" value="{{ request.GET.q }}">
@@ -24,10 +23,9 @@
         <div class="col-md-3">
             <input type="text" name="location" class="form-control" placeholder="City" value="{{ request.GET.location }}">
             <div class="form-check mt-1">
-    <input class="form-check-input" type="checkbox" name="include_remote" value="1" id="include_remote"
-           {% if request.GET.include_remote %}checked{% endif %}>
-    <label class="form-check-label small" for="include_remote">Include remote jobs</label>
-</div>
+                <input class="form-check-input" type="checkbox" name="include_remote" value="1" id="include_remote" {% if request.GET.include_remote %}checked{% endif %}>
+                <label class="form-check-label small" for="include_remote">Include remote jobs</label>
+            </div>
         </div>
         <div class="col-md-3">
             <select name="category" class="form-select">
@@ -38,7 +36,7 @@
             </select>
         </div>
         <div class="col-md-2">
-            <button type="submit" class="btn btn-primary w-100">Search</button>
+
         </div>
     </div>
 
@@ -81,87 +79,10 @@
             </select>
         </div>
     </div>
+    <button type="submit" class="visually-hidden">Search</button>
 </form>
 
-<p class="text-muted mb-3">Found {{ page_obj.paginator.count }} job{{ page_obj.paginator.count|pluralize }}</p>
-
-{% for job in page_obj %}
-    <div class="card mb-3 shadow-sm">
-        <div class="card-body">
-            <div class="d-flex justify-content-between align-items-start">
-                <h2 class="h5 mb-1">
-                    <a href="{% url 'job_detail' job.pk %}" class="text-decoration-none">{{ job.title }}</a>
-                </h2>
-                {% if job.salary_min and job.salary_max %}
-                    <span class="badge text-bg-success">{{ job.salary_min }} – {{ job.salary_max }} €</span>
-                {% elif job.salary_min %}
-                    <span class="badge text-bg-success">From {{ job.salary_min }} €</span>
-                {% endif %}
-            </div>
-
-            <p class="text-muted mb-2">
-                <a href="{{ request.path }}?company={{ job.company|urlencode }}" class="text-muted">{{ job.company }}</a>
-                {% if job.location %}
-                    · <a href="{{ request.path }}?location={{ job.location|urlencode }}" class="text-muted">{{ job.location }}</a>
-                {% endif %}
-                {% if job.source != "manual" %}
-                    <span class="badge text-bg-light border ms-1">via {{ job.get_source_display }}</span>
-                {% endif %}
-            </p>
-
-            <p class="mb-2">
-                <a href="{{ request.path }}?work_mode={{ job.work_mode }}" class="badge text-bg-info text-decoration-none">{{ job.get_work_mode_display }}</a>
-                <a href="{{ request.path }}?level={{ job.level }}" class="badge text-bg-warning text-decoration-none">{{ job.get_level_display }}</a>
-                <a href="{{ request.path }}?category={{ job.category }}" class="badge text-bg-dark text-decoration-none">{{ job.get_category_display }}</a>
-            </p>
-
-            <p class="mb-2 line-clamp-2">{{ job.description }}</p>
-
-            {% if job.skills.all %}
-                <div class="mb-2">
-                    {% for skill in job.skills.all %}
-                        <a href="{{ request.path }}?skill={{ skill.name|urlencode }}" class="badge text-bg-primary text-decoration-none">{{ skill }}</a>
-                    {% endfor %}
-                </div>
-            {% endif %}
-
-            <div class="d-flex justify-content-between align-items-center">
-                <span class="text-muted small" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-title="{{ job.created_at|date:'d M Y, H:i' }}">Posted {{ job.created_at|ago }}</span>
-                <a href="{% url 'job_detail' job.pk %}" class="small fw-semibold text-decoration-none">Read more →</a>
-            </div>
-        </div>
-    </div>
-{% empty %}
-    <div class="alert alert-info">No jobs match your filters.</div>
-{% endfor %}
-
-{% if page_obj.paginator.num_pages > 1 %}
-    <nav>
-        <ul class="pagination justify-content-center">
-            {% if page_obj.has_previous %}
-                <li class="page-item">
-                    <a class="page-link" href="?{% if querystring %}{{ querystring }}&{% endif %}page={{ page_obj.previous_page_number }}">←</a>
-                </li>
-            {% endif %}
-
-            {% for num in page_range %}
-                {% if num == page_obj.paginator.ELLIPSIS %}
-                    <li class="page-item disabled"><span class="page-link">…</span></li>
-                {% elif num == page_obj.number %}
-                    <li class="page-item active"><span class="page-link">{{ num }}</span></li>
-                {% else %}
-                    <li class="page-item">
-                        <a class="page-link" href="?{% if querystring %}{{ querystring }}&{% endif %}page={{ num }}">{{ num }}</a>
-                    </li>
-                {% endif %}
-            {% endfor %}
-
-            {% if page_obj.has_next %}
-                <li class="page-item">
-                    <a class="page-link" href="?{% if querystring %}{{ querystring }}&{% endif %}page={{ page_obj.next_page_number }}">→</a>
-                </li>
-            {% endif %}
-        </ul>
-    </nav>
-{% endif %}
+<div id="job-results">
+    {% include "jobs/_job_results.html" %}
+</div>
 {% endblock %}

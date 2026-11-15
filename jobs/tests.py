@@ -113,6 +113,16 @@ class JobAccessTests(TestCase):
         })
         self.assertEqual(response.status_code, 302)
 
+    def test_htmx_request_returns_only_results(self):
+        response = self.client.get(reverse("job_list"), HTTP_HX_REQUEST="true")
+        self.assertTemplateUsed(response, "jobs/_job_results.html")
+        self.assertTemplateNotUsed(response, "base.html")
+
+    def test_normal_request_returns_full_page(self):
+        response = self.client.get(reverse("job_list"))
+        self.assertTemplateUsed(response, "jobs/job_list.html")
+        self.assertTemplateUsed(response, "base.html")
+
 FAKE_API_RESPONSE = {
     "jobs": [
         {

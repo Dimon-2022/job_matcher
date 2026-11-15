@@ -1,3 +1,5 @@
+from urllib.parse import urlencode
+
 from django.urls import reverse_lazy
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
 from accounts.mixins import EmployerRequiredMixin
@@ -71,7 +73,9 @@ class JobListView(ListView):
         params = self.request.GET.copy()
         params.pop("page", None)
 
-        context["querystring"] = params.urlencode()
+        active = {key: value for key, value in params.items() if value}
+        context["has_filters"] = bool(active)
+        context["querystring"] = urlencode(active)
         context["categories"] = Job.CATEGORY_CHOICES
         context["levels"] = Job.LEVEL_CHOICES
         context["work_modes"] = Job.WORK_MODE_CHOICES
@@ -96,6 +100,11 @@ class JobListView(ListView):
         context["page_subtitle"] = self.page_subtitle
 
         return context
+
+    def get_template_names(self):
+        if self.request.headers.get("HX-Request"):
+            return ["jobs/_job_results.html"]
+        return [self.template_name]
 
 class StudentJobsView(JobListView):
     page_title = "Jobs for students"
