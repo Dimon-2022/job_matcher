@@ -3,12 +3,38 @@
 {% block title %}{{ page_title }}{% endblock %}
 
 {% block content %}
-<div class="mb-4">
+<div class="mb-3">
     <h1 class="h3 mb-1">{{ page_title }}</h1>
     {% if page_subtitle %}
         <p class="text-muted mb-0">{{ page_subtitle }}</p>
     {% endif %}
 </div>
+
+{% if show_tabs %}
+    <ul class="nav nav-tabs mb-3">
+        <li class="nav-item">
+            <a class="nav-link {% if not show_closed %}active{% endif %}" href="{% url 'job_list' %}">Open jobs</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {% if show_closed %}active{% endif %}" href="{% url 'closed_jobs' %}">
+                Recently closed
+                {% if not user.is_authenticated and closed_count %}
+                    <span class="badge rounded-pill text-bg-danger ms-1">{{ closed_count }}</span>
+                {% endif %}
+            </a>
+        </li>
+    </ul>
+
+    {% if not user.is_authenticated and not show_closed and closed_this_week %}
+        <div class="alert alert-light border d-flex justify-content-between align-items-center">
+            <span>
+                🔍 <strong>{{ closed_this_week }}</strong> job{{ closed_this_week|pluralize }} closed recently.
+                <a href="{% url 'signup' %}">Sign up</a> to get notified about jobs that match your skills before they close.
+            </span>
+            <a href="{% url 'closed_jobs' %}" class="btn btn-sm btn-outline-primary ms-3 text-nowrap">Take a look →</a>
+        </div>
+    {% endif %}
+{% endif %}
 
 <form method="GET" class="card card-body shadow-sm mb-4"
       hx-get="{{ request.path }}"
@@ -17,7 +43,7 @@
       hx-push-url="true"
       hx-indicator="#job-results">
     <div class="row g-2">
-        <div class="col-md-4">
+        <div class="col-md-6">
             <input type="text" name="q" class="form-control" placeholder="Job title or keyword" value="{{ request.GET.q }}">
         </div>
         <div class="col-md-3">
@@ -34,9 +60,6 @@
                     <option value="{{ value }}" {% if request.GET.category == value %}selected{% endif %}>{{ label }}</option>
                 {% endfor %}
             </select>
-        </div>
-        <div class="col-md-2">
-
         </div>
     </div>
 
@@ -79,6 +102,7 @@
             </select>
         </div>
     </div>
+
     <button type="submit" class="visually-hidden">Search</button>
 </form>
 

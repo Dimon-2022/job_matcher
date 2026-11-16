@@ -3,7 +3,7 @@ from urllib.parse import urlencode
 
 from django.db.models import Count, F, Q
 from django.db.models.functions import TruncWeek
-from django.shortcuts import get_object_or_404, redirect
+from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse_lazy
 from django.utils import timezone
 from django.views import View
@@ -15,10 +15,15 @@ from django.views.generic import (
     TemplateView,
     UpdateView,
 )
+from pgvector.django import CosineDistance
 
 from accounts.mixins import EmployerRequiredMixin
+from matching.services import calculate_score
 from .forms import JobForm
 from .models import Job
+
+
+# ---------- Job lists ----------
 
 class JobListView(ListView):
     model = Job
@@ -26,10 +31,12 @@ class JobListView(ListView):
     paginate_by = 10
     page_title = "All jobs"
     page_subtitle = ""
+    show_closed = False
+    show_tabs = True
 
     def get_queryset(self):
-        jobs = Job.objects.prefetch_related("skills")
         params = self.request.GET
+        jobs = Job.objects.prefetch_related("skills").filter(is_open=not self.show_closed)
 
         q = params.get("q")
         if q:
@@ -76,10 +83,11 @@ class JobListView(ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+
         params = self.request.GET.copy()
         params.pop("page", None)
-
         active = {key: value for key, value in params.items() if value}
+
         context["has_filters"] = bool(active)
         context["querystring"] = urlencode(active)
         context["categories"] = Job.CATEGORY_CHOICES
@@ -104,6 +112,12 @@ class JobListView(ListView):
 
         context["page_title"] = self.page_title
         context["page_subtitle"] = self.page_subtitle
+        context["show_closed"] = self.show_closed
+        context["show_tabs"] = self.show_tabs
+        context["closed_count"] = Job.objects.filter(is_open=False).count()
+        context["closed_this_week"] = Job.objects.filter(
+            is_open=False, created_at__gte=timezone.now() - timedelta(days=30)
+        ).count()
 
         return context
 
@@ -112,9 +126,11 @@ class JobListView(ListView):
             return ["jobs/_job_results.html"]
         return [self.template_name]
 
+
 class StudentJobsView(JobListView):
     page_title = "Jobs for students"
     page_subtitle = "Internships, part-time and junior positions that fit your study schedule."
+    show_tabs = False
 
     def get_queryset(self):
         return super().get_queryset().filter(
@@ -126,20 +142,67 @@ class StudentJobsView(JobListView):
 class FreelanceJobsView(JobListView):
     page_title = "Freelance jobs"
     page_subtitle = "Project-based and contract work you can do on your own schedule."
+    show_tabs = False
 
     def get_queryset(self):
         return super().get_queryset().filter(job_type="freelance")
+
+
+class ClosedJobsView(JobListView):
+    page_title = "Recently closed jobs"
+    page_subtitle = "See what employers were looking for and check whether you would have matched."
+    show_closed = True
+
+
+# ---------- Single job ----------
 
 class JobDetailView(DetailView):
     model = Job
     template_name = "jobs/job_detail.html"
 
 
+class JobInsightView(View):
+    def get(self, request, pk):
+        job = get_object_or_404(Job, pk=pk)
+
+        similar_jobs = (
+            Job.objects.filter(is_open=True)
+            .exclude(pk=job.pk)
+            .annotate(distance=CosineDistance("embedding", job.embedding))
+            .order_by("distance")[:3]
+        )
+
+        match = None
+        user = request.user
+        if user.is_authenticated and hasattr(user, "profile") and user.profile.role == "seeker":
+            resume = user.resumes.order_by("-uploaded_at").first()
+            if resume and resume.embedding is not None:
+                scored_job = (
+                    Job.objects.annotate(distance=CosineDistance("embedding", resume.embedding))
+                    .prefetch_related("skills")
+                    .get(pk=job.pk)
+                )
+                score = calculate_score(scored_job, set(resume.skills.all()))
+                match = {
+                    "score": score,
+                    "matched": scored_job.matched_skills,
+                    "missing": scored_job.missing_skills,
+                }
+
+        return render(request, "jobs/_job_insight.html", {
+            "job": job,
+            "similar_jobs": similar_jobs,
+            "match": match,
+        })
+
+
+# ---------- Employer CRUD ----------
+
 class JobCreateView(EmployerRequiredMixin, CreateView):
     model = Job
     form_class = JobForm
-    template_name = 'jobs/job_form.html'
-    success_url = reverse_lazy('my_jobs')
+    template_name = "jobs/job_form.html"
+    success_url = reverse_lazy("my_jobs")
 
     def form_valid(self, form):
         form.instance.owner = self.request.user
@@ -147,17 +210,17 @@ class JobCreateView(EmployerRequiredMixin, CreateView):
 
 
 class MyJobsView(EmployerRequiredMixin, ListView):
-    template_name = 'jobs/my_jobs.html'
+    template_name = "jobs/my_jobs.html"
 
     def get_queryset(self):
-        return Job.objects.filter(owner=self.request.user).order_by('-created_at')
+        return Job.objects.filter(owner=self.request.user).order_by("-created_at")
 
 
 class JobUpdateView(EmployerRequiredMixin, UpdateView):
     model = Job
     form_class = JobForm
-    template_name = 'jobs/job_form.html'
-    success_url = reverse_lazy('my_jobs')
+    template_name = "jobs/job_form.html"
+    success_url = reverse_lazy("my_jobs")
 
     def get_queryset(self):
         return Job.objects.filter(owner=self.request.user)
@@ -165,11 +228,21 @@ class JobUpdateView(EmployerRequiredMixin, UpdateView):
 
 class JobDeleteView(EmployerRequiredMixin, DeleteView):
     model = Job
-    template_name = 'jobs/job_confirm_delete.html'
-    success_url = reverse_lazy('my_jobs')
+    template_name = "jobs/job_confirm_delete.html"
+    success_url = reverse_lazy("my_jobs")
 
     def get_queryset(self):
         return Job.objects.filter(owner=self.request.user)
+
+
+class JobToggleOpenView(EmployerRequiredMixin, View):
+    def post(self, request, pk):
+        job = get_object_or_404(Job, pk=pk, owner=request.user)
+        Job.objects.filter(pk=job.pk).update(is_open=not job.is_open)
+        return redirect("my_jobs")
+
+
+# ---------- Stats ----------
 
 class StatsView(TemplateView):
     template_name = "jobs/stats.html"
@@ -199,14 +272,13 @@ class StatsView(TemplateView):
         for row in by_level:
             row["label"] = level_labels.get(row["level"], row["level"])
 
-        # Jobs per week
+        # Jobs per week, with empty weeks filled as zero
         by_week = list(
             jobs.annotate(week=TruncWeek("created_at"))
             .values("week")
             .annotate(total=Count("id"))
             .order_by("week")
         )
-
         if by_week:
             totals_by_week = {row["week"]: row["total"] for row in by_week}
             week = by_week[0]["week"]
@@ -250,9 +322,3 @@ class StatsView(TemplateView):
             "chart_data": chart_data,
         })
         return context
-
-class JobToggleOpenView(EmployerRequiredMixin, View):
-    def post(self, request, pk):
-        job = get_object_or_404(Job, pk=pk, owner=request.user)
-        Job.objects.filter(pk=job.pk).update(is_open=not job.is_open)
-        return redirect("my_jobs")

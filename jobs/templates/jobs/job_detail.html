@@ -10,29 +10,48 @@
 <div class="card shadow-sm">
     <div class="card-body p-4">
         {% if not job.is_open %}
-            <div class="alert alert-secondary mb-3">This position has been filled and is no longer accepting applications.</div>
+            <div class="alert alert-secondary d-flex justify-content-between align-items-center mb-3">
+                <span>This job is closed and no longer accepting applications.</span>
+                <button class="btn btn-sm btn-outline-primary ms-2 text-nowrap"
+                        hx-get="{% url 'job_insight' job.pk %}"
+                        hx-target="#job-insight"
+                        hx-swap="innerHTML">
+                    What was this job about?
+                </button>
+            </div>
+            <div id="job-insight" class="mb-3"></div>
         {% endif %}
-        {% if job.url and job.is_open %}
-        {% if job.source != "manual" %}
-    <span class="badge text-bg-light border">via {{ job.get_source_display }}</span>
-{% endif %}
-        <h1 class="h3 mb-1">{{ job.title }}</h1>
-        <p class="text-muted mb-3">{{ job.company }} · {{ job.location }} · Posted {{ job.created_at|date:"d M Y" }}</p>
+
+        <h1 class="h3 mb-1">
+            {{ job.title }}
+            {% if not job.is_open %}
+                <span class="badge text-bg-secondary align-middle fs-6">Closed</span>
+            {% endif %}
+        </h1>
+        <p class="text-muted mb-3">
+            {{ job.company }}
+            {% if job.location %} · {{ job.location }}{% endif %}
+            · {{ job.get_work_mode_display }}
+            · Posted {{ job.created_at|date:"d M Y" }}
+            {% if job.source != "manual" %}
+                <span class="badge text-bg-light border ms-1">via {{ job.get_source_display }}</span>
+            {% endif %}
+        </p>
 
         {% if job.salary_min and job.salary_max %}
-        <p><span class="badge text-bg-success fs-6">{{ job.salary_min }} – {{ job.salary_max }} € / month</span></p>
+            <p><span class="badge text-bg-success fs-6">{{ job.salary_min }} – {{ job.salary_max }} € / month</span></p>
         {% elif job.salary_min %}
-        <p><span class="badge text-bg-success fs-6">From {{ job.salary_min }} € / month</span></p>
+            <p><span class="badge text-bg-success fs-6">From {{ job.salary_min }} € / month</span></p>
         {% elif job.salary_max %}
-        <p><span class="badge text-bg-success fs-6">Up to {{ job.salary_max }} € / month</span></p>
+            <p><span class="badge text-bg-success fs-6">Up to {{ job.salary_max }} € / month</span></p>
         {% endif %}
 
         <h2 class="h6">Required skills</h2>
         <p>
             {% for skill in job.skills.all %}
-            <span class="badge text-bg-primary">{{ skill }}</span>
+                <span class="badge text-bg-primary">{{ skill }}</span>
             {% empty %}
-            <span class="text-muted">Not specified</span>
+                <span class="text-muted">Not specified</span>
             {% endfor %}
         </p>
 
@@ -40,18 +59,17 @@
         <div>{{ job.description|linebreaks }}</div>
 
         {% if job.latitude and job.longitude %}
-        <h2 class="h6 mt-4">Location</h2>
-        <div id="job-map" class="rounded border mb-3" style="height: 250px;"
-             data-lat="{{ job.latitude|stringformat:'f' }}"
-             data-lon="{{ job.longitude|stringformat:'f' }}"
-             data-title="{{ job.location }}"></div>
+            <h2 class="h6 mt-4">Location</h2>
+            <div id="job-map" class="rounded border mb-3" style="height: 250px;"
+                 data-lat="{{ job.latitude|stringformat:'f' }}"
+                 data-lon="{{ job.longitude|stringformat:'f' }}"
+                 data-title="{{ job.location }}"></div>
         {% endif %}
 
-        {% if job.url %}
-        <a href="{{ job.url }}" target="_blank" rel="noopener noreferrer nofollow"
-           class="btn btn-primary mt-3">
-            Apply on {{ job.url_domain }} ↗
-        </a>
+        {% if job.url and job.is_open %}
+            <a href="{{ job.url }}" target="_blank" rel="noopener noreferrer nofollow" class="btn btn-primary mt-3">
+                Apply on {{ job.url_domain }} ↗
+            </a>
         {% endif %}
 
         <a href="{% url 'job_list' %}" class="btn btn-outline-secondary mt-3">← Back to all jobs</a>

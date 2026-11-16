@@ -1,0 +1,62 @@
+<div class="card border-primary-subtle mt-3">
+    <div class="card-body">
+        <h2 class="h6 mb-3">💡 What was this job about?</h2>
+
+        <p class="mb-2">
+            A <strong>{{ job.get_level_display }}</strong> position in
+            <strong>{{ job.get_category_display }}</strong>
+            ({{ job.get_work_mode_display|lower }}{% if job.location %}, {{ job.location }}{% endif %}).
+            {% if job.salary_min and job.salary_max %}
+                Salary: {{ job.salary_min }} – {{ job.salary_max }} € / month.
+            {% elif job.salary_min %}
+                Salary: from {{ job.salary_min }} € / month.
+            {% endif %}
+        </p>
+
+        {% if job.skills.all %}
+            <p class="mb-3">
+                <span class="text-muted small">Key skills:</span>
+                {% for skill in job.skills.all %}
+                    <span class="badge text-bg-primary">{{ skill }}</span>
+                {% endfor %}
+            </p>
+        {% endif %}
+
+        {% if match %}
+            <h3 class="h6">Would you have matched?</h3>
+            <p class="mb-2">Based on your latest resume: <span class="badge text-bg-success fs-6">{{ match.score }}%</span></p>
+            {% if match.matched %}
+                <p class="mb-1">
+                    <span class="text-muted small">You have:</span>
+                    {% for skill in match.matched %}
+                        <span class="badge text-bg-success">{{ skill }}</span>
+                    {% endfor %}
+                </p>
+            {% endif %}
+            {% if match.missing %}
+                <p class="mb-3">
+                    <span class="text-muted small">Worth learning:</span>
+                    {% for skill in match.missing %}
+                        <span class="badge text-bg-secondary">{{ skill }}</span>
+                    {% endfor %}
+                </p>
+            {% endif %}
+        {% elif user.is_authenticated and user.profile.role == "seeker" %}
+            <p class="text-muted small mb-3">
+                <a href="{% url 'upload_resume' %}">Upload a resume</a> to see how well you would have matched.
+            </p>
+        {% endif %}
+
+        {% if similar_jobs %}
+            <h3 class="h6">Similar open jobs</h3>
+            <ul class="list-unstyled mb-0">
+                {% for similar in similar_jobs %}
+                    <li class="mb-1">
+                        <a href="{% url 'job_detail' similar.pk %}" class="text-decoration-none">{{ similar.title }}</a>
+                        <span class="text-muted small">· {{ similar.company }}</span>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+    </div>
+</div>

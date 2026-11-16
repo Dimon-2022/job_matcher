@@ -67,6 +67,43 @@ class JobAccessTests(TestCase):
         response = self.client.get(reverse("job_toggle_open", args=[self.job.pk]))
         self.assertEqual(response.status_code, 405)
 
+    def test_insight_shows_similar_open_jobs(self):
+        self.job.is_open = False
+        self.job.save()
+        similar = Job.objects.create(
+            title="Django Developer", company="WebCo",
+            description="Build web apps with Django and Python.",
+        )
+
+        response = self.client.get(reverse("job_insight", args=[self.job.pk]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(similar, response.context["similar_jobs"])
+        self.assertIsNone(response.context["match"])
+
+    def test_closed_jobs_not_in_open_list(self):
+        self.job.is_open = False
+        self.job.save()
+        response = self.client.get(reverse("job_list"))
+        self.assertNotIn(self.job, response.context["page_obj"])
+
+    def test_closed_jobs_page_shows_only_closed(self):
+        closed = Job.objects.create(title="Old job", company="X", description="x", is_open=False)
+        response = self.client.get(reverse("closed_jobs"))
+        jobs = list(response.context["page_obj"])
+        self.assertIn(closed, jobs)
+        self.assertNotIn(self.job, jobs)
+
+    def test_closed_banner_only_for_guests(self):
+        Job.objects.create(title="Old job", company="X", description="x", is_open=False)
+
+        response = self.client.get(reverse("job_list"))
+        self.assertContains(response, "Sign up</a> to get notified")
+
+        self.client.force_login(self.seeker)
+        response = self.client.get(reverse("job_list"))
+        self.assertNotContains(response, "Sign up</a> to get notified")
+
     @patch("jobs.forms.geocode", return_value={"name": "Bratislava", "lat": 48.14, "lon": 17.10})
     def test_employer_can_create_job(self, mock_geocode):
         self.client.force_login(self.employer)

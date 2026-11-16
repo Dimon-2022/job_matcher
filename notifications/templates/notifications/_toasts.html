@@ -1,0 +1,19 @@
+{% for notification in new_notifications %}
+    <div class="toast js-new-toast" role="alert" data-bs-autohide="false">
+        <div class="toast-header">
+            <strong class="me-auto">{% if notification.kind == "job_closed" %}🔒 Job closed{% else %}✨ New match{% endif %}</strong>
+            <small class="text-muted">just now</small>
+            <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+        </div>
+        <div class="toast-body">
+            {{ notification.message }}
+            {% if notification.url %}
+                <div class="mt-2">
+                    <a href="{% url 'notification_open' notification.pk %}" class="btn btn-primary btn-sm">View</a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+{% endfor %}
+
+<span id="notif-badge" hx-swap-oob="true">{% include "notifications/_badge.html" %}</span>
