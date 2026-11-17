@@ -1,5 +1,7 @@
 {% extends "base.html" %}
 
+{% load job_extras %}
+
 {% block title %}Notifications{% endblock %}
 
 {% block content %}
@@ -12,7 +14,7 @@
                 {% if not notification.is_read %}<span class="badge text-bg-primary me-2">New</span>{% endif %}
                 {{ notification.message }}
             </span>
-            <small class="text-muted text-nowrap ms-3">{{ notification.created_at|timesince }} ago</small>
+            <small class="text-muted text-nowrap ms-3">{{ notification.created_at|ago }}</small>
         </div>
     </a>
 {% empty %}

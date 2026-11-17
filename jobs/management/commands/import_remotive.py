@@ -3,6 +3,8 @@ from django.core.management.base import BaseCommand
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from django.utils.html import strip_tags
+from notifications.services import notify_new_match
+
 
 from jobs.models import Job
 
@@ -118,9 +120,9 @@ class Command(BaseCommand):
 
             if created:
                 created_count += 1
+                notify_new_match(job)
             else:
                 updated_count += 1
-            self.stdout.write(f"  {'+' if created else '~'} {title}")
 
         self.stdout.write(self.style.SUCCESS(
             f"Done: {created_count} created, {updated_count} updated, {skipped_count} skipped."

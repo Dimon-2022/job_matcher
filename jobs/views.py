@@ -3,6 +3,8 @@ from django.urls import reverse
 from urllib.parse import urlencode
 from django.utils.http import url_has_allowed_host_and_scheme
 
+from notifications.services import notify_job_closed, notify_new_match
+
 from django.db.models import Count, F, Q
 from django.db.models.functions import TruncWeek
 from django.shortcuts import get_object_or_404, redirect, render
@@ -225,7 +227,9 @@ class JobCreateView(EmployerRequiredMixin, CreateView):
 
     def form_valid(self, form):
         form.instance.owner = self.request.user
-        return super().form_valid(form)
+        response = super().form_valid(form)
+        notify_new_match(self.object)
+        return response
 
 
 class MyJobsView(EmployerRequiredMixin, ListView):
@@ -257,6 +261,8 @@ class JobDeleteView(EmployerRequiredMixin, DeleteView):
 class JobToggleOpenView(EmployerRequiredMixin, View):
     def post(self, request, pk):
         job = get_object_or_404(Job, pk=pk, owner=request.user)
+        if job.is_open:
+            notify_job_closed(job)
         Job.objects.filter(pk=job.pk).update(is_open=not job.is_open)
         return redirect("my_jobs")
 
