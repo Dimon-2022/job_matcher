@@ -119,6 +119,24 @@ class JobAccessTests(TestCase):
         response = self.client.get(reverse("job_list"))
         self.assertEqual(response.context["new_closed_count"], 1)
 
+    def test_guest_redirected_from_closed_job(self):
+        self.job.is_open = False
+        self.job.save()
+        response = self.client.get(reverse("job_detail", args=[self.job.pk]))
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(reverse("signup"), response.url)
+
+    def test_guest_can_open_open_job(self):
+        response = self.client.get(reverse("job_detail", args=[self.job.pk]))
+        self.assertEqual(response.status_code, 200)
+
+    def test_logged_in_user_can_open_closed_job(self):
+        self.job.is_open = False
+        self.job.save()
+        self.client.force_login(self.seeker)
+        response = self.client.get(reverse("job_detail", args=[self.job.pk]))
+        self.assertEqual(response.status_code, 200)
+
     @patch("jobs.forms.geocode", return_value={"name": "Bratislava", "lat": 48.14, "lon": 17.10})
     def test_employer_can_create_job(self, mock_geocode):
         self.client.force_login(self.employer)

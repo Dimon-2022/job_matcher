@@ -1,6 +1,10 @@
-<div class="card border-primary-subtle mt-3">
+<div class="card border-primary-subtle mt-3 insight-card">
     <div class="card-body">
-        <h2 class="h6 mb-3">💡 What was this job about?</h2>
+        <div class="d-flex justify-content-between align-items-start mb-3">
+            <h2 class="h6 mb-0">💡 What was this job about?</h2>
+            <button type="button" class="btn-close" aria-label="Close"
+                    onclick="this.closest('.insight-card').remove()"></button>
+        </div>
 
         <p class="mb-2">
             A <strong>{{ job.get_level_display }}</strong> position in

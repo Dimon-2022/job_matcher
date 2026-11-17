@@ -1,5 +1,7 @@
 from datetime import timedelta
+from django.urls import reverse
 from urllib.parse import urlencode
+from django.utils.http import url_has_allowed_host_and_scheme
 
 from django.db.models import Count, F, Q
 from django.db.models.functions import TruncWeek
@@ -168,6 +170,14 @@ class ClosedJobsView(JobListView):
 class JobDetailView(DetailView):
     model = Job
     template_name = "jobs/job_detail.html"
+
+    def get(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        if not self.object.is_open and not request.user.is_authenticated:
+            signup_url = reverse("signup")
+            return redirect(f"{signup_url}?{urlencode({'next': request.get_full_path()})}")
+        context = self.get_context_data(object=self.object)
+        return self.render_to_response(context)
 
 
 class JobInsightView(View):
