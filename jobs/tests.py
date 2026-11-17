@@ -104,6 +104,21 @@ class JobAccessTests(TestCase):
         response = self.client.get(reverse("job_list"))
         self.assertNotContains(response, "Sign up</a> to get notified")
 
+    def test_guest_badge_disappears_after_viewing_closed_jobs(self):
+        Job.objects.create(title="Old job", company="X", description="x", is_open=False)
+
+        response = self.client.get(reverse("job_list"))
+        self.assertEqual(response.context["new_closed_count"], 1)
+
+        self.client.get(reverse("closed_jobs"))
+
+        response = self.client.get(reverse("job_list"))
+        self.assertEqual(response.context["new_closed_count"], 0)
+
+        Job.objects.create(title="Another old job", company="Y", description="y", is_open=False)
+        response = self.client.get(reverse("job_list"))
+        self.assertEqual(response.context["new_closed_count"], 1)
+
     @patch("jobs.forms.geocode", return_value={"name": "Bratislava", "lat": 48.14, "lon": 17.10})
     def test_employer_can_create_job(self, mock_geocode):
         self.client.force_login(self.employer)

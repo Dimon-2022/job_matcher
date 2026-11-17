@@ -114,10 +114,12 @@ class JobListView(ListView):
         context["page_subtitle"] = self.page_subtitle
         context["show_closed"] = self.show_closed
         context["show_tabs"] = self.show_tabs
-        context["closed_count"] = Job.objects.filter(is_open=False).count()
-        context["closed_this_week"] = Job.objects.filter(
-            is_open=False, created_at__gte=timezone.now() - timedelta(days=30)
-        ).count()
+        closed_ids = set(Job.objects.filter(is_open=False).values_list("pk", flat=True))
+        seen_ids = set(self.request.session.get("seen_closed_ids", []))
+
+        context["closed_count"] = len(closed_ids)
+        context["new_closed_count"] = len(closed_ids - seen_ids)
+        context["closed_ids"] = closed_ids
 
         return context
 
@@ -152,6 +154,13 @@ class ClosedJobsView(JobListView):
     page_title = "Recently closed jobs"
     page_subtitle = "See what employers were looking for and check whether you would have matched."
     show_closed = True
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        if not self.request.user.is_authenticated:
+            self.request.session["seen_closed_ids"] = list(context["closed_ids"])
+            context["new_closed_count"] = 0
+        return context
 
 
 # ---------- Single job ----------
