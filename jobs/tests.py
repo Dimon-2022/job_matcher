@@ -3,6 +3,8 @@ from django.test import TestCase
 from django.urls import reverse
 from unittest.mock import patch
 
+from datetime import datetime, timedelta
+
 from datetime import timedelta
 from django.utils import timezone
 
@@ -136,6 +138,16 @@ class JobAccessTests(TestCase):
         self.client.force_login(self.seeker)
         response = self.client.get(reverse("job_detail", args=[self.job.pk]))
         self.assertEqual(response.status_code, 200)
+
+    def test_week_filter(self):
+        old = Job.objects.create(
+            title="Old job", company="A", description="x",
+            created_at=timezone.make_aware(datetime(2026, 10, 20, 12, 0)),
+        )
+        response = self.client.get(reverse("job_list"), {"week": "2026-10-19"})
+        jobs = list(response.context["page_obj"])
+        self.assertIn(old, jobs)
+        self.assertNotIn(self.job, jobs)
 
     @patch("jobs.forms.geocode", return_value={"name": "Bratislava", "lat": 48.14, "lon": 17.10})
     def test_employer_can_create_job(self, mock_geocode):

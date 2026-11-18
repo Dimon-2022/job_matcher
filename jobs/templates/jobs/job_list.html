@@ -104,6 +104,10 @@
     </div>
 
     <button type="submit" class="visually-hidden">Search</button>
+
+    {% if request.GET.week %}
+        <input type="hidden" name="week" value="{{ request.GET.week }}">
+    {% endif %}
 </form>
 
 <div id="job-results">

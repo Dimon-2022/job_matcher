@@ -74,9 +74,15 @@
             <div class="card-body">
                 <h2 class="h5 mb-3">Jobs by level</h2>
                 {% for row in by_level %}
-                    <div class="d-flex justify-content-between border-bottom py-1">
-                        <span>{{ row.label }}</span><strong>{{ row.total }}</strong>
-                    </div>
+                    {% if row.total %}
+                        <a href="{% url 'job_list' %}?level={{ row.level }}" class="d-flex justify-content-between border-bottom py-1 text-decoration-none text-reset stats-row">
+                            <span>{{ row.label }}</span><strong>{{ row.total }}</strong>
+                        </a>
+                    {% else %}
+                        <div class="d-flex justify-content-between border-bottom py-1 text-muted opacity-50">
+                            <span>{{ row.label }}</span><span>0</span>
+                        </div>
+                    {% endif %}
                 {% endfor %}
             </div>
         </div>
@@ -85,9 +91,15 @@
             <div class="card-body">
                 <h2 class="h5 mb-3">Posted per week</h2>
                 {% for row in by_week %}
-                    <div class="d-flex justify-content-between border-bottom py-1">
-                        <span>Week of {{ row.week|date:"d M" }}</span><strong>{{ row.total }}</strong>
-                    </div>
+                    {% if row.total %}
+                        <a href="{% url 'job_list' %}?week={{ row.week|date:'Y-m-d' }}" class="d-flex justify-content-between border-bottom py-1 text-decoration-none text-reset stats-row">
+                            <span>Week of {{ row.week|date:"d M" }}</span><strong>{{ row.total }}</strong>
+                        </a>
+                    {% else %}
+                        <div class="d-flex justify-content-between border-bottom py-1 text-muted opacity-50">
+                            <span>Week of {{ row.week|date:"d M" }}</span><span>0</span>
+                        </div>
+                    {% endif %}
                 {% endfor %}
             </div>
         </div>
@@ -102,6 +114,7 @@
 <script>
     const data = JSON.parse(document.getElementById("chart-data").textContent);
 
+    const JOB_LIST_URL = "{% url 'job_list' %}";
     const BRAND = "#0d6efd";
     const GRID = "rgba(0, 0, 0, 0.06)";
     const LEVEL_COLORS = ["#9ec5fe", "#6ea8fe", "#3d8bfd", "#0d6efd", "#084298"];
@@ -112,6 +125,18 @@
         maxBarThickness: 18,
     };
 
+    // Shared click handlers
+    function goToCategory(event, elements) {
+        if (elements.length) {
+            const key = data.categories.keys[elements[0].index];
+            window.location.href = `${JOB_LIST_URL}?category=${key}`;
+        }
+    }
+
+    function pointerOnBar(event, elements) {
+        event.native.target.style.cursor = elements.length ? "pointer" : "default";
+    }
+
     // 1. Jobs by category
     new Chart(document.getElementById("categoryChart"), {
         type: "bar",
@@ -120,6 +145,8 @@
             datasets: [{ label: "Jobs", data: data.categories.totals, ...barStyle }],
         },
         options: {
+            onClick: goToCategory,
+            onHover: pointerOnBar,
             indexAxis: "y",
             maintainAspectRatio: false,
             plugins: { legend: { display: false } },
@@ -148,6 +175,8 @@
             })),
         },
         options: {
+            onClick: goToCategory,
+            onHover: pointerOnBar,
             indexAxis: "y",
             maintainAspectRatio: false,
             plugins: {
@@ -169,38 +198,50 @@
     });
 
     // 3. Posted per week
-const weekTotals = data.weeks.totals;
+    const weekTotals = data.weeks.totals;
 
-new Chart(document.getElementById("weekChart"), {
-    type: "bar",
-    data: {
-        labels: data.weeks.labels,
-        datasets: [{
-            label: "Jobs posted",
-            data: weekTotals,
-            ...barStyle,
-            maxBarThickness: 40,
-            minBarLength: 4,
-            backgroundColor: weekTotals.map((value) => value === 0 ? "#dee2e6" : BRAND),
-        }],
-    },
-    options: {
-        maintainAspectRatio: false,
-        plugins: {
-            legend: { display: false },
-            tooltip: {
-                callbacks: {
-                    label: (ctx) => ctx.parsed.y === 0
-                        ? "No jobs posted"
-                        : `${ctx.parsed.y} job${ctx.parsed.y === 1 ? "" : "s"} posted`,
+    new Chart(document.getElementById("weekChart"), {
+        type: "bar",
+        data: {
+            labels: data.weeks.labels,
+            datasets: [{
+                label: "Jobs posted",
+                data: weekTotals,
+                ...barStyle,
+                maxBarThickness: 40,
+                minBarLength: 4,
+                backgroundColor: weekTotals.map((value) => value === 0 ? "#dee2e6" : BRAND),
+            }],
+        },
+        options: {
+            onClick: (event, elements) => {
+                if (elements.length) {
+                    const i = elements[0].index;
+                    if (weekTotals[i] > 0) {
+                        window.location.href = `${JOB_LIST_URL}?week=${data.weeks.keys[i]}`;
+                    }
+                }
+            },
+            onHover: (event, elements) => {
+                const clickable = elements.length && weekTotals[elements[0].index] > 0;
+                event.native.target.style.cursor = clickable ? "pointer" : "default";
+            },
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: (ctx) => ctx.parsed.y === 0
+                            ? "No jobs posted"
+                            : `${ctx.parsed.y} job${ctx.parsed.y === 1 ? "" : "s"} posted`,
+                    },
                 },
             },
+            scales: {
+                y: { beginAtZero: true, grid: { color: GRID }, ticks: { precision: 0 } },
+                x: { grid: { display: false } },
+            },
         },
-        scales: {
-            y: { beginAtZero: true, grid: { color: GRID }, ticks: { precision: 0 } },
-            x: { grid: { display: false } },
-        },
-    },
-});
+    });
 </script>
 {% endblock %}

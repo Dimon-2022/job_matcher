@@ -3,6 +3,9 @@ from django.urls import reverse
 from urllib.parse import urlencode
 from django.utils.http import url_has_allowed_host_and_scheme
 
+from datetime import datetime, time, timedelta
+from django.utils.dateparse import parse_date
+
 from notifications.services import notify_job_closed, notify_new_match
 
 from django.db.models import Count, F, Q
@@ -69,6 +72,13 @@ class JobListView(ListView):
         salary_from = params.get("salary_from")
         if salary_from and salary_from.isdigit():
             jobs = jobs.filter(salary_max__gte=int(salary_from))
+
+        week = params.get("week")
+        if week:
+            week_start = parse_date(week)
+            if week_start:
+                start = timezone.make_aware(datetime.combine(week_start, time.min))
+                jobs = jobs.filter(created_at__gte=start, created_at__lt=start + timedelta(days=7))
 
         posted = params.get("posted")
         if posted in ("1", "7", "30"):
@@ -291,11 +301,11 @@ class StatsView(TemplateView):
             row["label"] = category_labels.get(row["category"], row["category"])
             row["junior_share"] = round(row["junior"] / row["total"] * 100) if row["total"] else 0
 
-        # Jobs by level
-        level_labels = dict(Job.LEVEL_CHOICES)
-        by_level = list(jobs.values("level").annotate(total=Count("id")).order_by("-total"))
-        for row in by_level:
-            row["label"] = level_labels.get(row["level"], row["level"])
+        level_totals = dict(jobs.values_list("level").annotate(total=Count("id")))
+        by_level = [
+            {"level": level, "label": label, "total": level_totals.get(level, 0)}
+            for level, label in Job.LEVEL_CHOICES
+        ]
 
         # Jobs per week, with empty weeks filled as zero
         by_week = list(
@@ -329,11 +339,13 @@ class StatsView(TemplateView):
 
         chart_data = {
             "categories": {
+                "keys": [row["category"] for row in by_category],
                 "labels": [row["label"] for row in by_category],
                 "totals": [row["total"] for row in by_category],
                 "levels": level_series,
             },
             "weeks": {
+                "keys": [row["week"].strftime("%Y-%m-%d") for row in by_week],
                 "labels": [row["week"].strftime("%d %b") for row in by_week],
                 "totals": [row["total"] for row in by_week],
             },
