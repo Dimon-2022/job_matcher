@@ -3,6 +3,8 @@ from django.urls import reverse
 from urllib.parse import urlencode
 from django.utils.http import url_has_allowed_host_and_scheme
 
+from itertools import groupby
+
 from datetime import datetime, time, timedelta
 from django.utils.dateparse import parse_date
 
@@ -301,6 +303,7 @@ class StatsView(TemplateView):
             row["label"] = category_labels.get(row["category"], row["category"])
             row["junior_share"] = round(row["junior"] / row["total"] * 100) if row["total"] else 0
 
+        # Jobs by level, including empty levels
         level_totals = dict(jobs.values_list("level").annotate(total=Count("id")))
         by_level = [
             {"level": level, "label": label, "total": level_totals.get(level, 0)}
@@ -322,6 +325,19 @@ class StatsView(TemplateView):
             while week <= last_week:
                 by_week.append({"week": week, "total": totals_by_week.get(week, 0)})
                 week += timedelta(weeks=1)
+
+        # Weeks grouped by month, newest month first
+        today_month = timezone.localdate().replace(day=1)
+        months = []
+        for month_start, rows in groupby(by_week, key=lambda row: row["week"].date().replace(day=1)):
+            rows = list(rows)
+            months.append({
+                "start": month_start,
+                "total": sum(row["total"] for row in rows),
+                "weeks": rows,
+                "is_current": month_start == today_month,
+            })
+        months.reverse()
 
         # Level structure inside each category
         category_order = [row["category"] for row in by_category]
@@ -356,6 +372,7 @@ class StatsView(TemplateView):
             "by_category": by_category,
             "by_level": by_level,
             "by_week": by_week,
+            "months": months,
             "chart_data": chart_data,
         })
         return context

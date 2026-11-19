@@ -348,3 +348,22 @@ class AgoFilterTests(TestCase):
 
     def test_years(self):
         self.check(timedelta(days=800), "2 years ago")
+
+class StatsMonthGroupingTests(TestCase):
+
+    def test_past_month_is_grouped(self):
+        Job.objects.create(
+            title="October job", company="A", description="x",
+            created_at=timezone.make_aware(datetime(2026, 10, 14, 12, 0)),
+        )
+        Job.objects.create(
+            title="Another October job", company="B", description="x",
+            created_at=timezone.make_aware(datetime(2026, 10, 21, 12, 0)),
+        )
+
+        response = self.client.get(reverse("job_stats"))
+        months = response.context["months"]
+        october = next(m for m in months if m["start"].month == 10)
+
+        self.assertEqual(october["total"], 2)
+        self.assertFalse(october["is_current"])

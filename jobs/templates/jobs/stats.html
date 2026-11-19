@@ -90,16 +90,36 @@
         <div class="card shadow-sm">
             <div class="card-body">
                 <h2 class="h5 mb-3">Posted per week</h2>
-                {% for row in by_week %}
-                    {% if row.total %}
-                        <a href="{% url 'job_list' %}?week={{ row.week|date:'Y-m-d' }}" class="d-flex justify-content-between border-bottom py-1 text-decoration-none text-reset stats-row">
-                            <span>Week of {{ row.week|date:"d M" }}</span><strong>{{ row.total }}</strong>
-                        </a>
+                {% for month in months %}
+                    {% if month.is_current %}
+                        <div class="small text-muted mt-2 mb-1">{{ month.start|date:"F Y" }}</div>
+                        {% for row in month.weeks %}
+                            {% if row.total %}
+                                <a href="{% url 'job_list' %}?week={{ row.week|date:'Y-m-d' }}" class="d-flex justify-content-between border-bottom py-1 text-decoration-none text-reset stats-row">
+                                    <span>Week of {{ row.week|date:"d M" }}</span><strong>{{ row.total }}</strong>
+                                </a>
+                            {% else %}
+                                <div class="d-flex justify-content-between border-bottom py-1 text-muted opacity-50">
+                                    <span>Week of {{ row.week|date:"d M" }}</span><span>0</span>
+                                </div>
+                            {% endif %}
+                        {% endfor %}
                     {% else %}
-                        <div class="d-flex justify-content-between border-bottom py-1 text-muted opacity-50">
-                            <span>Week of {{ row.week|date:"d M" }}</span><span>0</span>
+                        <div class="d-flex justify-content-between align-items-center border-bottom py-2 gap-2">
+                            <strong>{{ month.start|date:"F Y" }}</strong>
+                            <select class="form-select form-select-sm w-auto ms-auto" onchange="if (this.value) window.location.href = this.value">
+                                <option value="">Choose week…</option>
+                                {% for row in month.weeks %}
+                                    <option value="{% url 'job_list' %}?week={{ row.week|date:'Y-m-d' }}" {% if not row.total %}disabled{% endif %}>
+                                        Week of {{ row.week|date:"d M" }} — {{ row.total }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                            <span class="fw-semibold">{{ month.total }}</span>
                         </div>
                     {% endif %}
+                {% empty %}
+                    <p class="text-muted mb-0">No jobs yet.</p>
                 {% endfor %}
             </div>
         </div>
@@ -125,7 +145,6 @@
         maxBarThickness: 18,
     };
 
-    // Shared click handlers
     function goToCategory(event, elements) {
         if (elements.length) {
             const key = data.categories.keys[elements[0].index];
