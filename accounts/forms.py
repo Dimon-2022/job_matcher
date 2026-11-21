@@ -1,8 +1,14 @@
 from django import forms
-from django.contrib.auth.forms import UserCreationForm
 
-from accounts.models import Profile
+from .models import Profile
 
 
-class SignUpForm(UserCreationForm):
-    role = forms.ChoiceField(choices=Profile.ROLE_CHOICES)
+class RoleSignupForm(forms.Form):
+    role = forms.ChoiceField(
+        choices=Profile.ROLE_CHOICES,
+        widget=forms.RadioSelect,
+        label="I am",
+    )
+
+    def signup(self, request, user):
+        Profile.objects.create(user=user, role=self.cleaned_data["role"])

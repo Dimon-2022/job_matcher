@@ -8,8 +8,7 @@ urlpatterns = [
     path('', include('resumes.urls')),
     path('', include("matching.urls")),
     path('', include("jobs.urls")),
-    path("accounts/", include("django.contrib.auth.urls")),
-    path("accounts/", include("accounts.urls")),
+    path("accounts/", include("allauth.urls")),
     path('', include("notifications.urls")),
 ]
 

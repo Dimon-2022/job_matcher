@@ -188,7 +188,7 @@ class JobDetailView(DetailView):
     def get(self, request, *args, **kwargs):
         self.object = self.get_object()
         if not self.object.is_open and not request.user.is_authenticated:
-            signup_url = reverse("signup")
+            signup_url = reverse("account_signup")
             return redirect(f"{signup_url}?{urlencode({'next': request.get_full_path()})}")
         context = self.get_context_data(object=self.object)
         return self.render_to_response(context)

@@ -43,7 +43,7 @@ class JobAccessTests(TestCase):
     def test_guest_redirected_to_login(self):
         response = self.client.get(reverse("job_create"))
         self.assertEqual(response.status_code, 302)
-        self.assertIn(reverse("login"), response.url)
+        self.assertIn(reverse("account_login"), response.url)
 
     def test_seeker_cannot_create_job(self):
         self.client.force_login(self.seeker)
@@ -126,7 +126,7 @@ class JobAccessTests(TestCase):
         self.job.save()
         response = self.client.get(reverse("job_detail", args=[self.job.pk]))
         self.assertEqual(response.status_code, 302)
-        self.assertIn(reverse("signup"), response.url)
+        self.assertIn(reverse("account_signup"), response.url)
 
     def test_guest_can_open_open_job(self):
         response = self.client.get(reverse("job_detail", args=[self.job.pk]))

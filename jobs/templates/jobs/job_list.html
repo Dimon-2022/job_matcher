@@ -29,7 +29,7 @@
     <div class="alert alert-light border d-flex justify-content-between align-items-center">
         <span>
             🔍 <strong>{{ new_closed_count }}</strong> job{{ new_closed_count|pluralize }} closed recently.
-            <a href="{% url 'signup' %}">Sign up</a> to get notified about jobs that match your skills before they close.
+            <a href="{% url 'account_signup' %}">Sign up</a> to get notified about jobs that match your skills before they close.
         </span>
         <a href="{% url 'closed_jobs' %}" class="btn btn-sm btn-outline-primary ms-3 text-nowrap">Take a look →</a>
     </div>
