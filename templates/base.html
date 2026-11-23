@@ -89,7 +89,7 @@
                         <span id="notif-badge">{% include "notifications/_badge.html" %}</span>
                     </a>
 
-                    <span class="text-white-50 small me-2">{{ user.email }}</span>
+                    <a class="small me-2 text-decoration-none {% if current == 'profile' %}text-white fw-semibold{% else %}text-white-50{% endif %}" href="{% url 'profile' %}">{{ user.email }}</a>
                     <form method="POST" action="{% url 'account_logout' %}" class="d-inline">
                         {% csrf_token %}
                         <button type="submit" class="btn btn-sm btn-outline-light">Logout</button>

@@ -10,6 +10,7 @@ urlpatterns = [
     path('', include("jobs.urls")),
     path("accounts/", include("allauth.urls")),
     path('', include("notifications.urls")),
+    path("", include("accounts.urls")),
 ]
 
 if settings.DEBUG:

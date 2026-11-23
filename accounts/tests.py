@@ -60,3 +60,31 @@ class LoginRedirectTests(TestCase):
     def test_external_next_is_ignored(self):
         response = self.login("https://evil.com/")
         self.assertRedirects(response, reverse("job_list"), fetch_redirect_response=False)
+
+from jobs.models import Skill
+
+
+class ProfileTests(TestCase):
+    def setUp(self):
+        cache.clear()
+        self.user = make_verified_user("seeker@example.com")
+
+    def test_guest_redirected_to_login(self):
+        response = self.client.get(reverse("profile"))
+        self.assertIn(reverse("account_login"), response.url)
+
+    def test_user_updates_own_profile(self):
+        python = Skill.objects.create(name="Python")
+        self.client.force_login(self.user)
+
+        response = self.client.post(reverse("profile"), {
+            "bio": "Student",
+            "city": "Košice",
+            "open_to_remote": "on",
+            "skills": [python.pk],
+        })
+
+        self.assertRedirects(response, reverse("profile"))
+        self.user.profile.refresh_from_db()
+        self.assertEqual(self.user.profile.city, "Košice")
+        self.assertEqual(list(self.user.profile.skills.values_list("name", flat=True)), ["Python"])
