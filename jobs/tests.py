@@ -155,7 +155,7 @@ class JobAccessTests(TestCase):
         self.client.force_login(self.seeker)
 
         response = self.client.get(reverse("job_apply", args=[self.job.pk]))
-        self.client.get(reverse("job_apply", args=[self.job.pk]))  # другий клік
+        self.client.get(reverse("job_apply", args=[self.job.pk]))
 
         self.assertRedirects(response, "https://example.com/apply", fetch_redirect_response=False)
         self.assertEqual(Application.objects.filter(user=self.seeker, job=self.job).count(), 1)
@@ -299,7 +299,7 @@ class ImportRemotiveTests(TestCase):
         mock_get.return_value = fake_response(FAKE_API_RESPONSE)
         self.run_import()
 
-        self.assertEqual(Job.objects.filter(source="remotive").count(), 2)
+        self.assertEqual(Job.objects.filter(source="remotive").count(), 3)
 
         job = Job.objects.get(external_id="101")
         self.assertEqual(job.company, "CloudNest")
@@ -307,19 +307,19 @@ class ImportRemotiveTests(TestCase):
         self.assertEqual(job.category, "backend")
         self.assertEqual(job.level, "senior")
 
-    def test_non_it_jobs_are_skipped(self, mock_get):
+    def test_non_it_jobs_become_other(self, mock_get):
         mock_get.return_value = fake_response(FAKE_API_RESPONSE)
-        output = self.run_import()
 
-        self.assertFalse(Job.objects.filter(external_id="102").exists())
-        self.assertIn("skipped", output)
+        self.run_import()
+
+        self.assertEqual(Job.objects.get(external_id="102").category, "other")
 
     def test_second_run_does_not_create_duplicates(self, mock_get):
         mock_get.return_value = fake_response(FAKE_API_RESPONSE)
         self.run_import()
         self.run_import()
 
-        self.assertEqual(Job.objects.filter(source="remotive").count(), 2)
+        self.assertEqual(Job.objects.filter(source="remotive").count(), 3)
 
     def test_html_is_stripped_from_description(self, mock_get):
         mock_get.return_value = fake_response(FAKE_API_RESPONSE)
@@ -417,6 +417,63 @@ FAKE_ARBEITNOW = {
     ],
     "links": {"next": None},
 }
+
+FAKE_JOBICY = {
+    "jobs": [
+        {
+            "id": 101,
+            "url": "https://jobicy.com/jobs/101-junior-python-developer",
+            "jobTitle": "Junior Python Developer",
+            "companyName": "Remote &amp; Co",
+            "jobIndustry": ["Software Engineering"],
+            "jobType": ["full-time"],
+            "jobGeo": "Europe",
+            "jobLevel": "Junior",
+            "jobDescription": "<p>Django &amp; APIs</p>",
+            "pubDate": "2026-11-20T10:00:00+00:00",
+            "salaryMin": 36000,
+            "salaryMax": 48000,
+            "salaryCurrency": "EUR",
+            "salaryPeriod": "yearly",
+        },
+        {
+            "id": 102,
+            "url": "https://jobicy.com/jobs/102-sales",
+            "jobTitle": "Sales Representative",
+            "companyName": "Shop",
+            "jobType": ["full-time"],
+            "jobGeo": "Europe",
+            "jobLevel": "Any",
+            "jobDescription": "Sell things",
+            "pubDate": "2026-11-20T10:00:00+00:00",
+        },
+    ]
+}
+
+
+def fake_classify_jobicy(title, description=""):
+    return "not_it_sales" if "Sales" in title else "backend"
+
+
+class ImportJobicyTests(TestCase):
+    @patch("jobs.management.commands.import_jobicy.time.sleep")
+    @patch("jobs.management.commands.import_jobicy.classify_job", side_effect=fake_classify_jobicy)
+    @patch("jobs.management.commands.import_jobicy.requests.get")
+    def test_imports_all_jobs_and_converts_salary(self, mock_get, mock_classify, mock_sleep):
+        mock_get.return_value.json.return_value = FAKE_JOBICY
+
+        call_command("import_jobicy", stdout=StringIO())
+
+        job = Job.objects.get(source="jobicy", external_id="101")
+        self.assertEqual(job.company, "Remote & Co")
+        self.assertEqual(job.level, "junior")
+        self.assertEqual(job.work_mode, "remote")
+        self.assertEqual(job.salary_min, 3000)
+        self.assertEqual(job.salary_max, 4000)
+
+
+        self.assertEqual(Job.objects.get(source="jobicy", external_id="102").category, "other")
+        self.assertEqual(Job.objects.filter(source="jobicy").count(), 2)
 
 
 def fake_classify(title, description=""):

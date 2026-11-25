@@ -79,6 +79,7 @@ class Job(models.Model):
         ("remotive", "Remotive"),
         ("jooble", "Jooble"),
         ("arbeitnow", "Arbeitnow"),
+        ("jobicy", "Jobicy")
     ]
 
     # Main info
