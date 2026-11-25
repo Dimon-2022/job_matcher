@@ -6,6 +6,8 @@ from functools import lru_cache
 
 from sentence_transformers import util
 
+MIN_SIMILARITY = 0.42
+
 model = SentenceTransformer("paraphrase-multilingual-MiniLM-L12-v2")
 
 def get_embedding(text):
@@ -55,7 +57,9 @@ def find_matching_jobs(resume, threshold=60):
 
 CATEGORY_EXAMPLES = {
     # IT categories
-    "backend": ["Backend developer", "Python Django developer", "Java Spring engineer", "Node.js backend engineer", "Go backend developer"],
+    "backend": ["Backend developer", "Python Django developer", "Java Spring engineer", "Node.js backend engineer", "Go backend developer", "Softwareentwickler", "Java Backend Developer", "Cloud Developer",
+"SAP ABAP Entwickler", "Protocol Software Engineer", "Embedded Software Engineer",
+"Development Engineer Software",],
     "frontend": ["Frontend developer", "React developer", "Vue.js engineer", "Angular developer", "UI engineer TypeScript"],
     "fullstack": ["Full-stack developer", "Fullstack engineer", "React and Node.js developer", "Full stack Ruby on Rails engineer", "Full-stack web developer"],
     "mobile": ["iOS developer", "Android developer", "Flutter developer", "React Native engineer", "Mobile app developer"],
@@ -65,18 +69,22 @@ CATEGORY_EXAMPLES = {
     "ml_ai": ["Machine learning engineer", "AI engineer", "Deep learning engineer", "LLM engineer"],
     "data_analyst": ["Data analyst", "Business intelligence analyst", "SQL analyst", "Power BI developer"],
     "qa_automation": ["QA automation engineer", "Test automation engineer", "SDET", "QA engineer"],
-    "security": ["Security engineer", "Penetration tester", "Cybersecurity analyst", "Application security engineer"],
-    "support": ["IT support engineer", "Service desk engineer", "Helpdesk technician", "Technical support specialist"],
+    "security": ["Security engineer", "Penetration tester", "Cybersecurity analyst", "Application security engineer", "Incident Response Consultant", "Digital Forensics Analyst", "SOC Analyst",
+],
+    "support": ["IT support engineer", "Service desk engineer", "Helpdesk technician", "Technical support specialist", "IT-Systemadministrator", "Systemadministrator", "IT-Support Mitarbeiter",],
     "ui_ux": ["UX designer", "UI designer", "Product designer Figma"],
     "product": ["Product manager", "Technical product owner", "Product owner"],
-    "project": ["Project manager", "Scrum master", "Delivery manager", "Agile coach"],
+    "project": ["Project manager", "Scrum master", "Delivery manager", "Agile coach", "Projektleitung IT", "Data & AI Project Lead", "IT-Projektmanager",],
     "other": ["Head of engineering", "Engineering manager", "CTO", "VP of engineering"],
     # Not IT
-    "not_it_service": ["Customer service representative", "Call center agent", "Customer support agent"],
-    "not_it_sales": ["Sales representative", "Account executive", "Inside sales contractor", "Business development representative"],
+    "not_it_service": ["Customer service representative", "Call center agent", "Customer support agent", "Safety Inspector", "Fachkraft für Arbeitssicherheit", "Bauleiter",
+"Laser Engineer", "Mechanical Engineer", "Construction Project Coordinator", "Bauprojektkoordination",],
+    "not_it_sales": ["Sales representative", "Account executive", "Inside sales contractor", "Business development representative","Vertriebsberater", "Sales Consultant", "Account Manager",
+"Marketing Manager", "Event Manager", "Marketing Manager Lead Generation", "Vertriebsberater Software", "Vertriebsmitarbeiter",
+],
     "not_it_writing": ["Copywriter", "Content writer", "Freelance writer", "Content reviewer"],
     "not_it_health": ["Nurse", "Patient care advocate", "Medical assistant"],
-    "not_it_admin": ["Office assistant", "Administrative assistant", "Data entry clerk", "Virtual assistant"],
+    "not_it_admin": ["Office assistant", "Administrative assistant", "Data entry clerk", "Virtual assistant","Buchhalter", "Senior Buchhalter", "Accountant", "Controller", "Leitung Controlling", "HR Business Partner", "Personalreferent",],
     "not_it_annotation": ["Video annotation specialist", "AI trainer data labeling", "Image annotator"],
 }
 
@@ -100,13 +108,26 @@ KEYWORD_RULES = [
 ]
 
 
-def classify_job(title, description=""):
+MIN_SIMILARITY = 0.5  # підберемо точніше на реальних даних нижче
+
+
+def classify_job_with_score(title, description=""):
     lowered = title.lower()
     for category, keywords in KEYWORD_RULES:
         if any(keyword in lowered for keyword in keywords):
-            return category
+            return category, 1.0
 
     labels, vectors = _example_vectors()
     job_vector = model.encode(title)
     scores = util.cos_sim(job_vector, vectors)[0]
-    return labels[int(scores.argmax())]
+    best = int(scores.argmax())
+    score = float(scores[best])
+
+    if score < MIN_SIMILARITY:
+        return "not_it_unknown", score
+    return labels[best], score
+
+
+def classify_job(title, description=""):
+    category, _ = classify_job_with_score(title, description)
+    return category

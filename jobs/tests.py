@@ -387,3 +387,64 @@ class StatsMonthGroupingTests(TestCase):
 
         self.assertEqual(october["total"], 2)
         self.assertFalse(october["is_current"])
+
+FAKE_ARBEITNOW = {
+    "data": [
+        {
+            "slug": "junior-python-berlin-1",
+            "company_name": "Acme GmbH",
+            "title": "Junior Python Developer",
+            "description": "<p>Python &amp; Django</p>",
+            "remote": False,
+            "url": "https://www.arbeitnow.com/jobs/junior-python-berlin-1",
+            "tags": ["Python"],
+            "job_types": ["Werkstudent"],
+            "location": "Berlin",
+            "created_at": 1764000000,
+        },
+        {
+            "slug": "verkaeufer-koeln-2",
+            "company_name": "Shop",
+            "title": "Verkäufer (m/w/d)",
+            "description": "Verkauf im Laden",
+            "remote": False,
+            "url": "https://www.arbeitnow.com/jobs/verkaeufer-koeln-2",
+            "tags": [],
+            "job_types": ["full time"],
+            "location": "Köln",
+            "created_at": 1764000000,
+        },
+    ],
+    "links": {"next": None},
+}
+
+
+def fake_classify(title, description=""):
+    return "not_it_sales" if "Verkäufer" in title else "backend"
+
+
+class ImportArbeitnowTests(TestCase):
+    @patch("jobs.management.commands.import_arbeitnow.classify_job", side_effect=fake_classify)
+    @patch("jobs.management.commands.import_arbeitnow.requests.get")
+    def test_imports_it_jobs_and_skips_others(self, mock_get, mock_classify):
+        mock_get.return_value.json.return_value = FAKE_ARBEITNOW
+
+        call_command("import_arbeitnow", stdout=StringIO())
+
+        job = Job.objects.get(source="arbeitnow")
+        self.assertEqual(job.title, "Junior Python Developer")
+        self.assertEqual(job.description, "Python & Django")
+        self.assertEqual(job.job_type, "internship")
+        self.assertEqual(job.level, "intern")
+        self.assertEqual(job.location, "Berlin")
+        self.assertEqual(Job.objects.filter(source="arbeitnow").count(), 1)
+
+    @patch("jobs.management.commands.import_arbeitnow.classify_job", side_effect=fake_classify)
+    @patch("jobs.management.commands.import_arbeitnow.requests.get")
+    def test_second_run_does_not_duplicate(self, mock_get, mock_classify):
+        mock_get.return_value.json.return_value = FAKE_ARBEITNOW
+
+        call_command("import_arbeitnow", stdout=StringIO())
+        call_command("import_arbeitnow", stdout=StringIO())
+
+        self.assertEqual(Job.objects.filter(source="arbeitnow").count(), 1)

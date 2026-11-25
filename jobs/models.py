@@ -78,6 +78,7 @@ class Job(models.Model):
         ("manual", "Posted on Job Matcher"),
         ("remotive", "Remotive"),
         ("jooble", "Jooble"),
+        ("arbeitnow", "Arbeitnow"),
     ]
 
     # Main info
