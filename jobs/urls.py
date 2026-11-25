@@ -15,4 +15,5 @@ urlpatterns = [
     path("<int:pk>/toggle/", views.JobToggleOpenView.as_view(), name="job_toggle_open"),
     path("<int:pk>/insight/", views.JobInsightView.as_view(), name="job_insight"),
     path("closed/", views.ClosedJobsView.as_view(), name="closed_jobs"),
+    path("<int:pk>/apply/", views.JobApplyView.as_view(), name="job_apply"),
 ]

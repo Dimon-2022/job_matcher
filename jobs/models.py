@@ -137,3 +137,17 @@ class Job(models.Model):
         self.embedding = get_embedding(text)
         super().save(*args, **kwargs)
         self.skills.set(extract_skills(text))
+
+class Application(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="applications")
+    job = models.ForeignKey(Job, on_delete=models.CASCADE, related_name="applications")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        constraints = [
+            models.UniqueConstraint(fields=["user", "job"], name="unique_application"),
+        ]
+
+    def __str__(self):
+        return f"{self.user} → {self.job}"

@@ -45,6 +45,20 @@
         .stats-row:hover {
             background: var(--bs-tertiary-bg);
         }
+        .avatar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: #6f42c1;
+    color: #fff;
+    font-weight: 600;
+    user-select: none;
+}
+.avatar-sm { width: 32px; height: 32px; font-size: .9rem; }
+.avatar-lg { width: 120px; height: 120px; font-size: 3rem; }
+.avatar-btn { border: 0; padding: 0; background: none; }
+.avatar-btn:focus-visible .avatar { outline: 2px solid #fff; outline-offset: 2px; }
     </style>
     {% block extra_head %}{% endblock %}
 </head>
@@ -63,39 +77,60 @@
                 <li class="nav-item">
                     <a class="nav-link {% if current == 'job_list' %}active{% endif %}" href="{% url 'job_list' %}">Jobs</a>
                 </li>
-                <li class="nav-item">
-                    <a class="nav-link {% if current == 'student_jobs' %}active{% endif %}" href="{% url 'student_jobs' %}">🎓 Students</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link {% if current == 'freelance_jobs' %}active{% endif %}" href="{% url 'freelance_jobs' %}">💻 Freelance</a>
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle {% if current == 'student_jobs' or current == 'freelance_jobs' %}active{% endif %}"
+                       href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">Explore</a>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item {% if current == 'student_jobs' %}active{% endif %}" href="{% url 'student_jobs' %}">🎓 Students</a></li>
+                        <li><a class="dropdown-item {% if current == 'freelance_jobs' %}active{% endif %}" href="{% url 'freelance_jobs' %}">💻 Freelance</a></li>
+                    </ul>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link {% if current == 'job_stats' %}active{% endif %}" href="{% url 'job_stats' %}">Stats</a>
                 </li>
             </ul>
 
-            <div class="d-flex align-items-center">
+            <div class="d-flex align-items-center gap-2">
                 {% if user.is_authenticated %}
                     {% if user.profile.role == "employer" %}
-                        <a class="btn btn-sm me-2 {% if current == 'my_jobs' %}btn-light{% else %}btn-outline-light{% endif %}" href="{% url 'my_jobs' %}">My jobs</a>
-                        <a class="btn btn-sm me-2 {% if current == 'job_create' %}btn-light{% else %}btn-outline-light{% endif %}" href="{% url 'job_create' %}">+ Post job</a>
+                        <a class="btn btn-sm btn-light" href="{% url 'job_create' %}">+ Post job</a>
                     {% elif user.profile.role == "seeker" %}
-                        <a class="btn btn-sm me-2 {% if current == 'my_resumes' %}btn-light{% else %}btn-outline-light{% endif %}" href="{% url 'my_resumes' %}">My resumes</a>
-                        <a class="btn btn-sm me-2 {% if current == 'upload_resume' %}btn-light{% else %}btn-outline-light{% endif %}" href="{% url 'upload_resume' %}">Upload resume</a>
+                        <a class="btn btn-sm btn-light" href="{% url 'upload_resume' %}">Upload resume</a>
                     {% endif %}
 
-                    <a class="btn btn-sm btn-outline-light position-relative me-3" href="{% url 'notification_list' %}" title="Notifications">
+                    <a class="btn btn-sm btn-outline-light position-relative" href="{% url 'notification_list' %}" title="Notifications">
                         🔔
                         <span id="notif-badge">{% include "notifications/_badge.html" %}</span>
                     </a>
 
-                    <a class="small me-2 text-decoration-none {% if current == 'profile' %}text-white fw-semibold{% else %}text-white-50{% endif %}" href="{% url 'profile' %}">{{ user.email }}</a>
-                    <form method="POST" action="{% url 'account_logout' %}" class="d-inline">
-                        {% csrf_token %}
-                        <button type="submit" class="btn btn-sm btn-outline-light">Logout</button>
-                    </form>
+                    <div class="dropdown">
+                        <button class="avatar-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Account">
+                            <span class="avatar avatar-sm">{{ user.email|first|upper }}</span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end shadow">
+                            <li class="dropdown-header">
+                                Signed in as<br>
+                                <strong class="text-body">{{ user.email }}</strong>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{% url 'profile' %}">👤 Your profile</a></li>
+                            {% if user.profile.role == "employer" %}
+                                <li><a class="dropdown-item" href="{% url 'my_jobs' %}">📋 My jobs</a></li>
+                            {% elif user.profile.role == "seeker" %}
+                                <li><a class="dropdown-item" href="{% url 'my_resumes' %}">📄 My resumes</a></li>
+                            {% endif %}
+                            <li><a class="dropdown-item" href="{% url 'account_change_password' %}">🔑 Change password</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <form method="post" action="{% url 'account_logout' %}">
+                                    {% csrf_token %}
+                                    <button type="submit" class="dropdown-item text-danger">Sign out</button>
+                                </form>
+                            </li>
+                        </ul>
+                    </div>
                 {% else %}
-                    <a class="btn btn-sm me-2 {% if current == 'account_login' %}btn-light{% else %}btn-outline-light{% endif %}" href="{% url 'account_login' %}">Login</a>
+                    <a class="btn btn-sm {% if current == 'account_login' %}btn-light{% else %}btn-outline-light{% endif %}" href="{% url 'account_login' %}">Login</a>
                     <a class="btn btn-sm {% if current == 'account_signup' %}btn-light{% else %}btn-outline-light{% endif %}" href="{% url 'account_signup' %}">Sign up</a>
                 {% endif %}
             </div>

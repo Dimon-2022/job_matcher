@@ -17,7 +17,7 @@ import requests
 from django.core.management import call_command
 
 from accounts.models import Profile
-from .models import Job
+from .models import Job, Application
 
 
 class JobAccessTests(TestCase):
@@ -148,6 +148,26 @@ class JobAccessTests(TestCase):
         jobs = list(response.context["page_obj"])
         self.assertIn(old, jobs)
         self.assertNotIn(self.job, jobs)
+
+    def test_apply_records_application_and_redirects(self):
+        self.job.url = "https://example.com/apply"
+        self.job.save()
+        self.client.force_login(self.seeker)
+
+        response = self.client.get(reverse("job_apply", args=[self.job.pk]))
+        self.client.get(reverse("job_apply", args=[self.job.pk]))  # другий клік
+
+        self.assertRedirects(response, "https://example.com/apply", fetch_redirect_response=False)
+        self.assertEqual(Application.objects.filter(user=self.seeker, job=self.job).count(), 1)
+
+    def test_guest_apply_redirects_without_record(self):
+        self.job.url = "https://example.com/apply"
+        self.job.save()
+
+        response = self.client.get(reverse("job_apply", args=[self.job.pk]))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertFalse(Application.objects.exists())
 
     @patch("jobs.forms.geocode", return_value={"name": "Bratislava", "lat": 48.14, "lon": 17.10})
     def test_employer_can_create_job(self, mock_geocode):

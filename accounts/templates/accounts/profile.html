@@ -1,54 +1,117 @@
 {% extends "base.html" %}
 {% load crispy_forms_tags %}
 
-{% block title %}My profile{% endblock %}
+{% block title %}{{ user.email }}{% endblock %}
 
 {% block extra_head %}
 <style>
-    #div_id_skills > div {
-        columns: 3;
-        max-height: 260px;
-        overflow-y: auto;
-        padding: .5rem .75rem;
-        border: 1px solid var(--bs-border-color);
-        border-radius: .375rem;
-        background: #fff;
-    }
+    .heatmap { display: flex; gap: 3px; overflow-x: auto; padding-bottom: 4px; }
+    .heatmap-week { display: flex; flex-direction: column; gap: 3px; }
+    .heatmap-cell { width: 11px; height: 11px; border-radius: 2px; background: #ebedf0; }
+    .heatmap-cell.level-1 { background: #9be9a8; }
+    .heatmap-cell.level-2 { background: #40c463; }
+    .heatmap-cell.level-3 { background: #30a14e; }
+    .heatmap-cell.level-4 { background: #216e39; }
+    .heatmap-cell.future { visibility: hidden; }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="row g-4">
     <div class="col-lg-4">
-        <div class="card shadow-sm">
+        <div class="text-center text-lg-start">
+            <div class="avatar avatar-lg mb-3">{{ user.email|first|upper }}</div>
+            <h1 class="h5 mb-1 text-break">{{ user.email }}</h1>
+            <span class="badge text-bg-primary mb-3">{{ profile.get_role_display }}</span>
+
+            {% if profile.bio %}<p class="mb-2">{{ profile.bio }}</p>{% endif %}
+            <p class="small text-muted mb-3">
+                {% if profile.city %}📍 {{ profile.city }}{% endif %}
+                {% if profile.open_to_remote %}{% if profile.city %} · {% endif %}🌍 Open to remote{% endif %}
+            </p>
+        </div>
+
+        <button class="btn btn-outline-secondary btn-sm w-100 mb-3" data-bs-toggle="collapse" data-bs-target="#edit-profile">
+            Edit profile
+        </button>
+        <div class="collapse {% if form.errors %}show{% endif %}" id="edit-profile">
+            <form method="post" class="mb-3">
+                {% csrf_token %}
+                {{ form|crispy }}
+                <button type="submit" class="btn btn-primary btn-sm">Save</button>
+            </form>
+        </div>
+
+        <div class="list-group small">
+            <a class="list-group-item list-group-item-action" href="{% url 'account_email' %}">✉️ Manage email</a>
+            <a class="list-group-item list-group-item-action" href="{% url 'account_change_password' %}">🔑 Change password</a>
+        </div>
+    </div>
+    <div class="col-lg-8">
+
+        {% if profile.role != "employer" %}
+            <div class="card shadow-sm mb-4">
+                <div class="card-body">
+                    <h2 class="h6 mb-3">Skills</h2>
+                    {% if resume_skills %}
+                        {% for skill in resume_skills %}
+                            <a href="{% url 'job_list' %}?skill={{ skill.name|urlencode }}" class="badge text-bg-light border text-decoration-none me-1 mb-1">{{ skill.name }}</a>
+                        {% endfor %}
+                        <p class="small text-muted mt-2 mb-0">From your latest resume.</p>
+                    {% elif resume_skills is None %}
+                        <p class="text-muted mb-2">Upload a resume and we'll detect your skills automatically.</p>
+                        <a href="{% url 'upload_resume' %}" class="btn btn-sm btn-primary">Upload resume</a>
+                    {% else %}
+                        <p class="text-muted mb-0">We couldn't find known skills in your latest resume.</p>
+                    {% endif %}
+                </div>
+            </div>
+        {% endif %}
+
+        <div class="card shadow-sm mb-4">
             <div class="card-body">
-                <h1 class="h5 mb-3">Account</h1>
-                <p class="mb-1 fw-semibold text-break">{{ user.email }}</p>
-                <p class="mb-3"><span class="badge text-bg-primary">{{ profile.get_role_display }}</span></p>
-                <div class="list-group list-group-flush small">
-                    <a class="list-group-item list-group-item-action px-0" href="{% url 'account_email' %}">✉️ Manage email</a>
-                    <a class="list-group-item list-group-item-action px-0" href="{% url 'account_change_password' %}">🔑 Change password</a>
+                <h2 class="h6 mb-3">{{ activity_total }} {{ activity_label }} in the last year</h2>
+                <div class="heatmap">
+                    {% for week in activity %}
+                        <div class="heatmap-week">
+                            {% for day in week %}
+                                <div class="heatmap-cell level-{{ day.level }}{% if day.future %} future{% endif %}"
+                                     title="{{ day.date|date:'M j, Y' }}: {{ day.count }}"></div>
+                            {% endfor %}
+                        </div>
+                    {% endfor %}
+                </div>
+                <div class="d-flex justify-content-end align-items-center gap-1 small text-muted mt-2">
+                    Less
+                    <span class="heatmap-cell"></span>
+                    <span class="heatmap-cell level-1"></span>
+                    <span class="heatmap-cell level-2"></span>
+                    <span class="heatmap-cell level-3"></span>
+                    <span class="heatmap-cell level-4"></span>
+                    More
                 </div>
             </div>
         </div>
-    </div>
 
-    <div class="col-lg-8">
-        <div class="card shadow-sm">
-            <div class="card-body">
-                <h2 class="h5 mb-3">Profile</h2>
-                {% if skills_from_resume %}
-                    <div class="alert alert-info small py-2">
-                        We prefilled your skills from your latest resume. Check them and press Save.
-                    </div>
-                {% endif %}
-                <form method="post">
-                    {% csrf_token %}
-                    {{ form|crispy }}
-                    <button type="submit" class="btn btn-primary">Save</button>
-                </form>
+        {% if recent_applications %}
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h2 class="h6 mb-3">Recent applications</h2>
+                    <ul class="list-unstyled mb-0">
+                        {% for app in recent_applications %}
+                            <li class="d-flex justify-content-between py-1 border-bottom">
+                                <span>
+                                    <a href="{% url 'job_detail' app.job.pk %}">{{ app.job.title }}</a>
+                                    <span class="text-muted small">· {{ app.job.company }}</span>
+                                    {% if not app.job.is_open %}<span class="badge text-bg-secondary ms-1">Closed</span>{% endif %}
+                                </span>
+                                <span class="small text-muted">{{ app.created_at|date:"M j" }}</span>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                </div>
             </div>
-        </div>
+        {% endif %}
     </div>
 </div>
 {% endblock %}

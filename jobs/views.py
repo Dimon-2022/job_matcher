@@ -30,6 +30,8 @@ from accounts.mixins import EmployerRequiredMixin
 from matching.services import calculate_score
 from .forms import JobForm
 from .models import Job
+from django.http import Http404
+from .models import Application, Job
 
 
 # ---------- Job lists ----------
@@ -185,6 +187,12 @@ class JobDetailView(DetailView):
     model = Job
     template_name = "jobs/job_detail.html"
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        if self.request.user.is_authenticated:
+            context["applied"] = self.object.applications.filter(user=self.request.user).first()
+        return context
+
     def get(self, request, *args, **kwargs):
         self.object = self.get_object()
         if not self.object.is_open and not request.user.is_authenticated:
@@ -193,6 +201,16 @@ class JobDetailView(DetailView):
         context = self.get_context_data(object=self.object)
         return self.render_to_response(context)
 
+class JobApplyView(View):
+    def get(self, request, pk):
+        job = get_object_or_404(Job, pk=pk, is_open=True)
+        if not job.url:
+            raise Http404("This job has no application link.")
+
+        if request.user.is_authenticated:
+            Application.objects.get_or_create(user=request.user, job=job)
+
+        return redirect(job.url)
 
 class JobInsightView(View):
     def get(self, request, pk):

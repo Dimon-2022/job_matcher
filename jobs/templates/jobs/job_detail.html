@@ -67,10 +67,13 @@
         {% endif %}
 
         {% if job.url and job.is_open %}
-            <a href="{{ job.url }}" target="_blank" rel="noopener noreferrer nofollow" class="btn btn-primary mt-3">
-                Apply on {{ job.url_domain }} ↗
-            </a>
-        {% endif %}
+    {% if applied %}
+        <span class="badge text-bg-success me-2">✓ Applied {{ applied.created_at|date:"M j" }}</span>
+    {% endif %}
+    <a href="{% url 'job_apply' job.pk %}" target="_blank" rel="noopener noreferrer nofollow" class="btn btn-primary">
+        Apply on {{ job.url_domain }} ↗
+    </a>
+{% endif %}
 
         <a href="{% url 'job_list' %}" class="btn btn-outline-secondary mt-3">← Back to all jobs</a>
     </div>

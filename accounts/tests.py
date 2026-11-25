@@ -61,7 +61,7 @@ class LoginRedirectTests(TestCase):
         response = self.login("https://evil.com/")
         self.assertRedirects(response, reverse("job_list"), fetch_redirect_response=False)
 
-from jobs.models import Skill
+from jobs.models import Skill, Application, Job
 
 
 class ProfileTests(TestCase):
@@ -74,17 +74,25 @@ class ProfileTests(TestCase):
         self.assertIn(reverse("account_login"), response.url)
 
     def test_user_updates_own_profile(self):
-        python = Skill.objects.create(name="Python")
         self.client.force_login(self.user)
 
         response = self.client.post(reverse("profile"), {
             "bio": "Student",
             "city": "Košice",
             "open_to_remote": "on",
-            "skills": [python.pk],
         })
 
         self.assertRedirects(response, reverse("profile"))
         self.user.profile.refresh_from_db()
         self.assertEqual(self.user.profile.city, "Košice")
-        self.assertEqual(list(self.user.profile.skills.values_list("name", flat=True)), ["Python"])
+
+    def test_profile_shows_application_count(self):
+        employer = make_verified_user("boss@example.com", role="employer")
+        job = Job.objects.create(title="Junior Python", company="X", description="Python", owner=employer)
+        Application.objects.create(user=self.user, job=job)
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("profile"))
+
+        self.assertEqual(response.context["activity_total"], 1)
+        self.assertContains(response, "Junior Python")

@@ -16,10 +16,9 @@ class RoleSignupForm(forms.Form):
 class ProfileForm(forms.ModelForm):
     class Meta:
         model = Profile
-        fields = ["bio", "city", "open_to_remote", "skills"]
+        fields = ["bio", "city", "open_to_remote"]
         widgets = {
             "bio": forms.Textarea(attrs={"rows": 3, "placeholder": "Student at TUKE, looking for a Python internship..."}),
-            "skills": forms.CheckboxSelectMultiple,
         }
         labels = {
             "bio": "About me",
