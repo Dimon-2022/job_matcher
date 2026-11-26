@@ -450,6 +450,86 @@ FAKE_JOBICY = {
     ]
 }
 
+from jobs.models import CompanyFeed
+
+FAKE_GREENHOUSE = {
+    "jobs": [
+        {
+            "id": 1, "title": "Backend Engineer", "location": {"name": "Berlin, Germany"},
+            "absolute_url": "https://boards.greenhouse.io/acme/jobs/1",
+            "content": "&lt;p&gt;Python&lt;/p&gt;", "first_published": "2026-11-20T10:00:00Z",
+        },
+        {
+            "id": 2, "title": "Backend Engineer", "location": {"name": "San Francisco, CA"},
+            "absolute_url": "https://boards.greenhouse.io/acme/jobs/2",
+            "content": "", "first_published": "2026-11-20T10:00:00Z",
+        },
+    ]
+}
+
+FAKE_PERSONIO = b"""<?xml version="1.0" encoding="UTF-8"?>
+<workzag-jobs>
+  <position>
+    <id>555</id>
+    <name>Junior Python Developer</name>
+    <office>Vienna</office>
+    <employmentType>permanent</employmentType>
+    <seniority>entry-level</seniority>
+    <schedule>full-time</schedule>
+    <createdAt>2026-11-20T10:00:00+00:00</createdAt>
+    <jobDescriptions>
+      <jobDescription><name>Your tasks</name><value><![CDATA[<p>Build APIs</p>]]></value></jobDescription>
+    </jobDescriptions>
+  </position>
+</workzag-jobs>"""
+
+
+class ImportCompanyFeedsTests(TestCase):
+    def setUp(self):
+            CompanyFeed.objects.all().delete()
+
+    @patch("jobs.importers.time.sleep")
+    @patch("jobs.importers.classify_job", return_value="backend")
+    @patch("jobs.importers.requests.get")
+    def test_greenhouse_imports_only_europe(self, mock_get, mock_classify, mock_sleep):
+        CompanyFeed.objects.create(name="Acme", ats="greenhouse", slug="acme")
+        mock_get.return_value.json.return_value = FAKE_GREENHOUSE
+
+        call_command("import_greenhouse", stdout=StringIO(), stderr=StringIO())
+
+        job = Job.objects.get(source="greenhouse")
+        self.assertEqual(job.external_id, "acme-1")
+        self.assertEqual(job.company, "Acme")
+        self.assertEqual(job.description, "Python")
+        self.assertEqual(Job.objects.filter(source="greenhouse").count(), 1)
+
+    @patch("jobs.importers.time.sleep")
+    @patch("jobs.importers.classify_job", return_value="backend")
+    @patch("jobs.importers.requests.get")
+    def test_personio_parses_xml(self, mock_get, mock_classify, mock_sleep):
+        CompanyFeed.objects.create(name="Wien GmbH", ats="personio", slug="wien")
+        mock_get.return_value.content = FAKE_PERSONIO
+
+        call_command("import_personio", stdout=StringIO(), stderr=StringIO())
+
+        job = Job.objects.get(source="personio")
+        self.assertEqual(job.title, "Junior Python Developer")
+        self.assertEqual(job.level, "junior")
+        self.assertEqual(job.location, "Vienna")
+        self.assertEqual(job.url, "https://wien.jobs.personio.de/job/555")
+        self.assertIn("Build APIs", job.description)
+
+    @patch("jobs.importers.time.sleep")
+    @patch("jobs.importers.requests.get")
+    def test_broken_company_does_not_stop_import(self, mock_get, mock_sleep):
+        import requests
+        CompanyFeed.objects.create(name="Dead", ats="greenhouse", slug="dead")
+        mock_get.side_effect = requests.ConnectionError("404")
+        err = StringIO()
+
+        call_command("import_greenhouse", stdout=StringIO(), stderr=err)
+
+        self.assertIn("Dead", err.getvalue())
 
 def fake_classify_jobicy(title, description=""):
     return "not_it_sales" if "Sales" in title else "backend"

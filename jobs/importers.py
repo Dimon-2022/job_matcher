@@ -1,4 +1,5 @@
 import html
+import re
 import time
 
 import requests
@@ -11,6 +12,24 @@ from matching.services import classify_job
 from notifications.services import notify_new_match
 
 HEADERS = {"User-Agent": "JobMatcher/1.0 (student project)"}
+
+IT_TITLE_SIGNAL = re.compile(
+    r"\b(developer|entwickler\w*|engineer\w*|software\w*|programm\w*|devops|sre|data|"
+    r"machine learning|ml|ai|frontend|front-end|backend|back-end|full[- ]?stack|qa|tester|"
+    r"test automation|security|cloud|it|informatik\w*|sysadmin|administrator|architect|"
+    r"product (manager|owner)|scrum|ux|ui|web|mobile|ios|android|sap|abap)\b",
+    re.IGNORECASE,
+)
+
+TECH_DEPARTMENT = re.compile(
+    r"\b(engineering|tech\w*|it|software|development|entwicklung|data|product|"
+    r"r&d|research|security|platform|infrastructure)\b",
+    re.IGNORECASE,
+)
+
+
+def has_it_signal(title, department=""):
+    return bool(IT_TITLE_SIGNAL.search(title) or TECH_DEPARTMENT.search(department or ""))
 
 
 def guess_level(title):
@@ -42,10 +61,13 @@ class BaseImportCommand(BaseCommand):
     def parse(self, item):
         raise NotImplementedError
 
-    def get_json(self, url, params=None):
+    def get_response(self, url, params=None):
         response = requests.get(url, params=params, headers=HEADERS, timeout=15)
         response.raise_for_status()
-        return response.json()
+        return response
+
+    def get_json(self, url, params=None):
+        return self.get_response(url, params).json()
 
     def pause(self):
         time.sleep(self.pause_seconds)
@@ -78,12 +100,13 @@ class BaseImportCommand(BaseCommand):
         title = clean_text(data.get("title"))
         description = clean_text(data.get("description"))
 
+        if not self.trust_source_category and not has_it_signal(title, data.get("department")):
+            stats["skipped"] += 1
+            self.stdout.write(f"- [no IT signal] {title}")
+            return
+
         category = classify_job(title, description)
         if category.startswith("not_it"):
-            if not self.trust_source_category:
-                stats["skipped"] += 1
-                self.stdout.write(f"- [{category}] {title}")
-                return
             category = "other"
 
         url = data.get("url") or ""

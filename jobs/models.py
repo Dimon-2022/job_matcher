@@ -79,7 +79,9 @@ class Job(models.Model):
         ("remotive", "Remotive"),
         ("jooble", "Jooble"),
         ("arbeitnow", "Arbeitnow"),
-        ("jobicy", "Jobicy")
+        ("jobicy", "Jobicy"),
+        ("greenhouse", "Greenhouse"),
+        ("personio", "Personio"),
     ]
 
     # Main info
@@ -153,3 +155,23 @@ class Application(models.Model):
 
     def __str__(self):
         return f"{self.user} → {self.job}"
+
+class CompanyFeed(models.Model):
+    ATS_CHOICES = [
+        ("greenhouse", "Greenhouse"),
+        ("personio", "Personio"),
+    ]
+
+    name = models.CharField(max_length=100)
+    ats = models.CharField(max_length=20, choices=ATS_CHOICES)
+    slug = models.CharField(max_length=100, help_text="greenhouse: boards.greenhouse.io/<slug>; personio: <slug>.jobs.personio.de")
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ["ats", "name"]
+        constraints = [
+            models.UniqueConstraint(fields=["ats", "slug"], name="unique_company_feed"),
+        ]
+
+    def __str__(self):
+        return f"{self.name} ({self.get_ats_display()})"
