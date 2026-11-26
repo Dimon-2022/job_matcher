@@ -287,7 +287,7 @@ def fake_response(data):
     return response
 
 
-@patch("jobs.management.commands.import_remotive.requests.get")
+@patch("jobs.importers.requests.get")
 class ImportRemotiveTests(TestCase):
 
     def run_import(self):
@@ -456,9 +456,9 @@ def fake_classify_jobicy(title, description=""):
 
 
 class ImportJobicyTests(TestCase):
-    @patch("jobs.management.commands.import_jobicy.time.sleep")
-    @patch("jobs.management.commands.import_jobicy.classify_job", side_effect=fake_classify_jobicy)
-    @patch("jobs.management.commands.import_jobicy.requests.get")
+    @patch("jobs.importers.time.sleep")
+    @patch("jobs.importers.classify_job", side_effect=fake_classify_jobicy)
+    @patch("jobs.importers.requests.get")
     def test_imports_all_jobs_and_converts_salary(self, mock_get, mock_classify, mock_sleep):
         mock_get.return_value.json.return_value = FAKE_JOBICY
 
@@ -481,8 +481,8 @@ def fake_classify(title, description=""):
 
 
 class ImportArbeitnowTests(TestCase):
-    @patch("jobs.management.commands.import_arbeitnow.classify_job", side_effect=fake_classify)
-    @patch("jobs.management.commands.import_arbeitnow.requests.get")
+    @patch("jobs.importers.classify_job", side_effect=fake_classify)
+    @patch("jobs.importers.requests.get")
     def test_imports_it_jobs_and_skips_others(self, mock_get, mock_classify):
         mock_get.return_value.json.return_value = FAKE_ARBEITNOW
 
@@ -496,8 +496,8 @@ class ImportArbeitnowTests(TestCase):
         self.assertEqual(job.location, "Berlin")
         self.assertEqual(Job.objects.filter(source="arbeitnow").count(), 1)
 
-    @patch("jobs.management.commands.import_arbeitnow.classify_job", side_effect=fake_classify)
-    @patch("jobs.management.commands.import_arbeitnow.requests.get")
+    @patch("jobs.importers.classify_job", side_effect=fake_classify)
+    @patch("jobs.importers.requests.get")
     def test_second_run_does_not_duplicate(self, mock_get, mock_classify):
         mock_get.return_value.json.return_value = FAKE_ARBEITNOW
 
