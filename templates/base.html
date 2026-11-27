@@ -59,6 +59,15 @@
 .avatar-lg { width: 120px; height: 120px; font-size: 3rem; }
 .avatar-btn { border: 0; padding: 0; background: none; }
 .avatar-btn:focus-visible .avatar { outline: 2px solid #fff; outline-offset: 2px; }
+
+.flag-link {
+    display: inline-block;
+    text-decoration: none;
+    transition: transform .15s;
+}
+.flag-link:hover {
+    transform: scale(1.25);
+}
     </style>
     {% block extra_head %}{% endblock %}
 </head>

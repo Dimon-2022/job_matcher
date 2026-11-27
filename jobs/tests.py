@@ -17,7 +17,7 @@ import requests
 from django.core.management import call_command
 
 from accounts.models import Profile
-from .models import Job, Application
+from .models import Job, Application, ExchangeRate
 from .geo import detect_country
 
 class JobAccessTests(TestCase):
@@ -624,3 +624,43 @@ class CountryFilterTests(TestCase):
 
         self.assertEqual(sk["total"], 2)
         self.assertEqual(sk["flag"], "🇸🇰")
+
+class CurrencyTests(TestCase):
+    def setUp(self):
+        ExchangeRate.objects.create(currency="USD", per_eur="1.10")
+        ExchangeRate.objects.create(currency="CZK", per_eur="25.00")
+
+    def test_eur_month_stays_the_same(self):
+        self.assertEqual(ExchangeRate.to_eur_monthly(3000, "EUR", "month"), 3000)
+
+    def test_usd_per_year(self):
+        self.assertEqual(ExchangeRate.to_eur_monthly(66000, "USD", "year"), 5000)
+
+    def test_czk_per_month(self):
+        self.assertEqual(ExchangeRate.to_eur_monthly(75000, "CZK", "month"), 3000)
+
+    def test_unknown_currency_returns_none(self):
+        self.assertIsNone(ExchangeRate.to_eur_monthly(1000, "XYZ", "month"))
+
+    def test_job_save_calculates_eur(self):
+        job = Job.objects.create(
+            title="Dev", company="A", description="x",
+            salary_min=66000, salary_max=79200, salary_currency="USD", salary_period="year",
+        )
+        self.assertEqual(job.salary_eur_min, 5000)
+        self.assertEqual(job.salary_eur_max, 6000)
+        self.assertEqual(job.salary_text, "$66 000 – $79 200 / year")
+        self.assertEqual(job.salary_eur_text, "≈ €5 000 – €6 000 / month")
+
+    def test_salary_filter_compares_in_eur(self):
+        czk = Job.objects.create(
+            title="Prague Dev", company="A", description="x",
+            salary_max=75000, salary_currency="CZK",
+        )
+        eur = Job.objects.create(title="Cheap Dev", company="B", description="x", salary_max=2000)
+
+        response = self.client.get(reverse("job_list"), {"salary_from": "2500"})
+        jobs = list(response.context["page_obj"])
+
+        self.assertIn(czk, jobs)
+        self.assertNotIn(eur, jobs)

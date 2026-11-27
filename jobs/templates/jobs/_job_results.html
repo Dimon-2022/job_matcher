@@ -15,16 +15,22 @@
                     <h2 class="h5 mb-1">
                         <a href="{% url 'job_detail' job.pk %}" class="text-decoration-none">{{ job.title }}</a>
                     </h2>
-                    {% if job.salary_min and job.salary_max %}
-                        <span class="badge text-bg-success">{{ job.salary_min }} – {{ job.salary_max }} €</span>
-                    {% elif job.salary_min %}
-                        <span class="badge text-bg-success">From {{ job.salary_min }} €</span>
+                    {% if job.salary_text %}
+                        <span class="badge text-bg-success">{{ job.salary_text }}</span>
+                        {% if job.salary_eur_text %}
+                            <small class="text-muted ms-1">{{ job.salary_eur_text }}</small>
+                        {% endif %}
                     {% endif %}
                 </div>
 
                 <p class="text-muted mb-2">
                     <a href="{{ request.path }}?company={{ job.company|urlencode }}" class="meta-link">{{ job.company }}</a>
-                    {% if job.country %}{{ job.country|flag }} {% endif %}
+                    {% if job.country %}
+    <a href="{{ request.path }}?country={{ job.country }}"
+       class="flag-link"
+       data-bs-toggle="tooltip"
+       title="Show jobs in {{ job.get_country_display }}">{{ job.country|flag }}</a>
+{% endif %}
                     {% if job.location %}
                         ·
                         {% if job.work_mode == "remote" %}

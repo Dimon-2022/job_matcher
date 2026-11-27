@@ -38,12 +38,11 @@
             {% endif %}
         </p>
 
-        {% if job.salary_min and job.salary_max %}
-            <p><span class="badge text-bg-success fs-6">{{ job.salary_min }} – {{ job.salary_max }} € / month</span></p>
-        {% elif job.salary_min %}
-            <p><span class="badge text-bg-success fs-6">From {{ job.salary_min }} € / month</span></p>
-        {% elif job.salary_max %}
-            <p><span class="badge text-bg-success fs-6">Up to {{ job.salary_max }} € / month</span></p>
+        {% if job.salary_text %}
+            <span class="badge text-bg-success">{{ job.salary_text }}</span>
+            {% if job.salary_eur_text %}
+                <small class="text-muted ms-1">{{ job.salary_eur_text }}</small>
+            {% endif %}
         {% endif %}
 
         <h2 class="h6">Required skills</h2>

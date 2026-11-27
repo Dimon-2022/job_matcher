@@ -77,7 +77,7 @@ class JobListView(ListView):
 
         salary_from = params.get("salary_from")
         if salary_from and salary_from.isdigit():
-            jobs = jobs.filter(salary_max__gte=int(salary_from))
+            jobs = jobs.filter(salary_eur_max__gte=int(salary_from))
 
         week = params.get("week")
         if week:
@@ -98,6 +98,9 @@ class JobListView(ListView):
             ordering = ["created_at"]
         else:
             ordering = ["-created_at"]
+
+        if sort == "salary":
+            ordering = [F("salary_eur_max").desc(nulls_last=True)]
 
         return jobs.order_by("-is_open", *ordering)
 

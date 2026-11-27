@@ -10,6 +10,24 @@ from matching.services import get_embedding, extract_skills
 
 from .geo import COUNTRY_CHOICES
 
+CURRENCY_CHOICES = [
+    ("EUR", "EUR €"), ("USD", "USD $"), ("GBP", "GBP £"), ("CHF", "CHF"),
+    ("CZK", "CZK Kč"), ("PLN", "PLN zł"), ("HUF", "HUF Ft"), ("RON", "RON lei"),
+    ("SEK", "SEK kr"), ("NOK", "NOK kr"), ("DKK", "DKK kr"),
+]
+SALARY_PERIOD_CHOICES = [("month", "per month"), ("year", "per year")]
+
+CURRENCY_SYMBOLS = {
+    "EUR": "€", "USD": "$", "GBP": "£", "CHF": "CHF", "CZK": "Kč", "PLN": "zł",
+    "HUF": "Ft", "RON": "lei", "SEK": "kr", "NOK": "kr", "DKK": "kr",
+}
+SYMBOL_BEFORE = {"EUR", "USD", "GBP"}
+
+
+def format_money(amount, currency):
+    number = f"{amount:,}".replace(",", " ")
+    symbol = CURRENCY_SYMBOLS.get(currency, currency)
+    return f"{symbol}{number}" if currency in SYMBOL_BEFORE else f"{number} {symbol}"
 
 class Skill(models.Model):
     name = models.CharField(max_length=100, unique=True)
@@ -17,6 +35,29 @@ class Skill(models.Model):
     def __str__(self):
         return self.name
 
+class ExchangeRate(models.Model):
+    currency = models.CharField(max_length=3, unique=True)
+    per_eur = models.DecimalField(max_digits=12, decimal_places=4)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"1 EUR = {self.per_eur} {self.currency}"
+
+    @classmethod
+    def to_eur_monthly(cls, amount, currency, period):
+        if amount is None:
+            return None
+        currency = (currency or "EUR").upper()
+        if currency == "EUR":
+            value = float(amount)
+        else:
+            rate = cls.objects.filter(currency=currency).values_list("per_eur", flat=True).first()
+            if rate is None:
+                return None
+            value = float(amount) / float(rate)
+        if period == "year":
+            value /= 12
+        return int(round(value / 100) * 100)
 
 class Job(models.Model):
     CATEGORY_CHOICES = [
@@ -105,6 +146,10 @@ class Job(models.Model):
     # Salary
     salary_min = models.PositiveIntegerField(null=True, blank=True)
     salary_max = models.PositiveIntegerField(null=True, blank=True)
+    salary_currency = models.CharField(max_length=3, choices=CURRENCY_CHOICES, default="EUR")
+    salary_period = models.CharField(max_length=5, choices=SALARY_PERIOD_CHOICES, default="month")
+    salary_eur_min = models.PositiveIntegerField(null=True, blank=True, editable=False)
+    salary_eur_max = models.PositiveIntegerField(null=True, blank=True, editable=False, db_index=True)
 
     # Source
     url = models.URLField(blank=True, validators=[URLValidator(schemes=["https"])])
@@ -142,8 +187,24 @@ class Job(models.Model):
     def save(self, *args, **kwargs):
         text = f"{self.title} {self.description}"
         self.embedding = get_embedding(text)
+        self.salary_eur_min = ExchangeRate.to_eur_monthly(self.salary_min, self.salary_currency, self.salary_period)
+        self.salary_eur_max = ExchangeRate.to_eur_monthly(self.salary_max, self.salary_currency, self.salary_period)
         super().save(*args, **kwargs)
         self.skills.set(extract_skills(text))
+
+    @property
+    def salary_text(self):
+        parts = [format_money(v, self.salary_currency) for v in (self.salary_min, self.salary_max) if v]
+        if not parts:
+            return ""
+        return f"{' – '.join(parts)} / {self.salary_period}"
+
+    @property
+    def salary_eur_text(self):
+        if self.salary_currency == "EUR" and self.salary_period == "month":
+            return ""
+        parts = [format_money(v, "EUR") for v in (self.salary_eur_min, self.salary_eur_max) if v]
+        return f"≈ {' – '.join(parts)} / month" if parts else ""
 
 class Application(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="applications")
