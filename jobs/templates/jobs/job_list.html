@@ -81,6 +81,16 @@
             </select>
         </div>
         <div class="col-md-3">
+            <select name="country" class="form-select">
+                <option value="">🌍 All countries</option>
+                {% for c in countries %}
+                    <option value="{{ c.code }}" {% if request.GET.country == c.code %}selected{% endif %}>
+                        {{ c.flag }} {{ c.name }} ({{ c.total }})
+                    </option>
+                 {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-3">
             <div class="input-group">
                 <span class="input-group-text">From</span>
                 <input type="number" name="salary_from" class="form-control" step="100" min="0" placeholder="Salary" value="{{ request.GET.salary_from }}">

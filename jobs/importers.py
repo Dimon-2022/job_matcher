@@ -1,7 +1,7 @@
 import html
 import re
 import time
-
+from jobs.geo import detect_country
 import requests
 from django.core.management.base import BaseCommand
 from django.utils import timezone
@@ -124,6 +124,7 @@ class BaseImportCommand(BaseCommand):
                 "level": data.get("level") or guess_level(title),
                 "job_type": data.get("job_type") or "full_time",
                 "location": (data.get("location") or "")[:100],
+                "country": data.get("country") or detect_country(data.get("location") or ""),
                 "work_mode": data.get("work_mode") or "remote",
                 "salary_min": data.get("salary_min"),
                 "salary_max": data.get("salary_max"),

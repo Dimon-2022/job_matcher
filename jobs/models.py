@@ -8,6 +8,8 @@ from pgvector.django import VectorField
 
 from matching.services import get_embedding, extract_skills
 
+from .geo import COUNTRY_CHOICES
+
 
 class Skill(models.Model):
     name = models.CharField(max_length=100, unique=True)
@@ -95,6 +97,7 @@ class Job(models.Model):
 
     # Location
     location = models.CharField(max_length=200, blank=True)
+    country = models.CharField(max_length=2, choices=COUNTRY_CHOICES, blank=True, db_index=True)
     latitude = models.FloatField(null=True, blank=True)
     longitude = models.FloatField(null=True, blank=True)
     work_mode = models.CharField(max_length=10, choices=WORK_MODE_CHOICES, default="onsite")

@@ -1,20 +1,14 @@
-from datetime import timedelta
-from django.urls import reverse
-from urllib.parse import urlencode
-from django.utils.http import url_has_allowed_host_and_scheme
-
-from itertools import groupby
-
 from datetime import datetime, time, timedelta
-from django.utils.dateparse import parse_date
-
-from notifications.services import notify_job_closed, notify_new_match
+from itertools import groupby
+from urllib.parse import urlencode
 
 from django.db.models import Count, F, Q
 from django.db.models.functions import TruncWeek
+from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
-from django.urls import reverse_lazy
+from django.urls import reverse, reverse_lazy
 from django.utils import timezone
+from django.utils.dateparse import parse_date
 from django.views import View
 from django.views.generic import (
     CreateView,
@@ -28,9 +22,10 @@ from pgvector.django import CosineDistance
 
 from accounts.mixins import EmployerRequiredMixin
 from matching.services import calculate_score
+from notifications.services import notify_job_closed, notify_new_match
+
 from .forms import JobForm
-from .models import Job
-from django.http import Http404
+from .geo import COUNTRY_NAMES, flag
 from .models import Application, Job
 
 
@@ -63,6 +58,13 @@ class JobListView(ListView):
             if params.get("include_remote"):
                 city_filter |= Q(work_mode="remote")
             jobs = jobs.filter(city_filter)
+
+        country = params.get("country")
+        if country:
+            country_filter = Q(country=country)
+            if params.get("include_remote"):
+                country_filter |= Q(work_mode="remote")
+            jobs = jobs.filter(country_filter)
 
         for field in ("category", "level", "job_type", "work_mode"):
             value = params.get(field)
@@ -123,6 +125,24 @@ class JobListView(ListView):
             ("salary", "Highest salary"),
         ]
 
+        # Країни, де зараз є відкриті вакансії, — найпопулярніші зверху
+        country_counts = (
+            Job.objects.filter(is_open=True)
+            .exclude(country="")
+            .values("country")
+            .annotate(total=Count("id"))
+            .order_by("-total")
+        )
+        context["countries"] = [
+            {
+                "code": row["country"],
+                "name": COUNTRY_NAMES.get(row["country"], row["country"]),
+                "flag": flag(row["country"]),
+                "total": row["total"],
+            }
+            for row in country_counts
+        ]
+
         page_obj = context["page_obj"]
         context["page_range"] = page_obj.paginator.get_elided_page_range(
             page_obj.number, on_each_side=2, on_ends=1
@@ -132,9 +152,9 @@ class JobListView(ListView):
         context["page_subtitle"] = self.page_subtitle
         context["show_closed"] = self.show_closed
         context["show_tabs"] = self.show_tabs
+
         closed_ids = set(Job.objects.filter(is_open=False).values_list("pk", flat=True))
         seen_ids = set(self.request.session.get("seen_closed_ids", []))
-
         context["closed_count"] = len(closed_ids)
         context["new_closed_count"] = len(closed_ids - seen_ids)
         context["closed_ids"] = closed_ids
@@ -201,7 +221,10 @@ class JobDetailView(DetailView):
         context = self.get_context_data(object=self.object)
         return self.render_to_response(context)
 
+
 class JobApplyView(View):
+    """Записує відгук і перенаправляє на сайт вакансії."""
+
     def get(self, request, pk):
         job = get_object_or_404(Job, pk=pk, is_open=True)
         if not job.url:
@@ -211,6 +234,7 @@ class JobApplyView(View):
             Application.objects.get_or_create(user=request.user, job=job)
 
         return redirect(job.url)
+
 
 class JobInsightView(View):
     def get(self, request, pk):

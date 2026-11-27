@@ -18,7 +18,7 @@ from django.core.management import call_command
 
 from accounts.models import Profile
 from .models import Job, Application
-
+from .geo import detect_country
 
 class JobAccessTests(TestCase):
 
@@ -575,6 +575,7 @@ class ImportArbeitnowTests(TestCase):
         self.assertEqual(job.level, "intern")
         self.assertEqual(job.location, "Berlin")
         self.assertEqual(Job.objects.filter(source="arbeitnow").count(), 1)
+        self.assertEqual(job.country, "DE")
 
     @patch("jobs.importers.classify_job", side_effect=fake_classify)
     @patch("jobs.importers.requests.get")
@@ -585,3 +586,41 @@ class ImportArbeitnowTests(TestCase):
         call_command("import_arbeitnow", stdout=StringIO())
 
         self.assertEqual(Job.objects.filter(source="arbeitnow").count(), 1)
+
+class CountryDetectionTests(TestCase):
+    def test_detects_by_country_and_city(self):
+        self.assertEqual(detect_country("Berlin, Germany"), "DE")
+        self.assertEqual(detect_country("Remote - Wien"), "AT")
+        self.assertEqual(detect_country("Košice"), "SK")
+        self.assertEqual(detect_country("Praha 5"), "CZ")
+
+    def test_uk_does_not_match_ukraine(self):
+        self.assertEqual(detect_country("Kyiv, Ukraine"), "UA")
+        self.assertEqual(detect_country("London, UK"), "GB")
+
+    def test_unknown_or_region_returns_empty(self):
+        self.assertEqual(detect_country("Europe"), "")
+        self.assertEqual(detect_country("Worldwide"), "")
+        self.assertEqual(detect_country(""), "")
+
+
+class CountryFilterTests(TestCase):
+    def test_filter_by_country(self):
+        sk = Job.objects.create(title="Python Dev", company="A", description="x", country="SK")
+        de = Job.objects.create(title="Java Dev", company="B", description="x", country="DE")
+
+        response = self.client.get(reverse("job_list"), {"country": "SK"})
+        jobs = list(response.context["page_obj"])
+
+        self.assertIn(sk, jobs)
+        self.assertNotIn(de, jobs)
+
+    def test_country_list_has_counts(self):
+        Job.objects.create(title="A", company="A", description="x", country="SK")
+        Job.objects.create(title="B", company="B", description="x", country="SK")
+
+        response = self.client.get(reverse("job_list"))
+        sk = next(c for c in response.context["countries"] if c["code"] == "SK")
+
+        self.assertEqual(sk["total"], 2)
+        self.assertEqual(sk["flag"], "🇸🇰")

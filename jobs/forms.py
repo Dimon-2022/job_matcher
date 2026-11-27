@@ -72,8 +72,9 @@ class JobForm(forms.ModelForm):
                 cleaned_data["location"] = place["name"]
                 self.instance.latitude = place["lat"]
                 self.instance.longitude = place["lon"]
+                self.instance.country = place.get("country", "")
         else:
             self.instance.latitude = None
             self.instance.longitude = None
-
+            self.instance.country = ""
         return cleaned_data
